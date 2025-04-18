@@ -16,7 +16,7 @@ python3 -m serial.tools.miniterm -e [your-port] 115200
 
 Once connected, configure the carrier frequency. For example, to set the carrier at 2.45 GHz, type:
 
-        f 2450000000
+        f 2450
 
 
 ## Backscatter Setup
