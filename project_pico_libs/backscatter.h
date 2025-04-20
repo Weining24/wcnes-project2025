@@ -41,6 +41,15 @@ struct backscatter_config {
   uint32_t deviation;
   uint32_t minRxBw;
 };
+
+/* Type to describe a square wave with phase delay.
+   Each period can be viewed as split into 3 parts,
+   each lasting cycles[i] cycles with value values[i]
+*/
+typedef struct square_wave {
+  uint8_t values[3]; // e.g. {1, 0, 1} for 90 degree phase
+  uint16_t cycles[3]; // e.g. {7, 14, 7} for 90 degree phase
+} square_wave_t;
 #endif
 
 // ----------- //
@@ -53,9 +62,12 @@ uint8_t instructionCount(uint16_t delay, uint16_t max_delay);
 // repeat the instruction until the desired delay has past
 int16_t repeat(uint16_t* instructionBuffer, int16_t delay, uint32_t asm_instr, uint8_t *length, uint16_t max_delay);
 
-bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instructionBuffer, struct pio_program *backscatter_program, bool twoAntennas);
+// compute the number of delay cycles corresponding to a given phase shift at the center frequency
+uint16_t phase_shift_to_delay_cycles(uint16_t phase_shift, uint16_t d0, uint16_t d1);
+
+bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instructionBuffer, struct pio_program *backscatter_program);
 
 /* based on d0/d1/baud, the modulation parameters will be computed and returned in the struct backscatter_config */
-void backscatter_program_init(PIO pio, uint sm, uint pin1, uint pin2, uint16_t d0, uint16_t d1, uint32_t baud, struct backscatter_config *config, uint16_t *instructionBuffer, bool twoAntennas);
+void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, uint8_t num_antennae, uint16_t d0, uint16_t d1, uint32_t baud, struct backscatter_config *config, uint16_t *instructionBuffer);
 
-void backscatter_send(PIO pio, uint sm, uint32_t *message, uint32_t len);
+void backscatter_send(PIO pio, uint8_t *state_machines, uint16_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t len);

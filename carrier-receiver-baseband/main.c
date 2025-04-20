@@ -37,10 +37,12 @@
 #define RECEIVER              2500 // define the receiver board either 2500 or 1352
 #define PIN_TX1                  6
 #define PIN_TX2                 27
+#define PIN_TX3                  9 // TODO: NOTE: Antennaes in Matlab simulation do not follow the board numbering...
+#define PIN_TX4                 22
 #define CLOCK_DIV0              20 // larger
 #define CLOCK_DIV1              18 // smaller
 #define DESIRED_BAUD        100000
-#define TWOANTENNAS          true
+#define NUM_ANTENNAE             4 // number of antennae on the card to use
 
 #define CARRIER_FEQ     2450000000
 
@@ -69,18 +71,27 @@ int main() {
 
     sleep_ms(5000);
 
-    /* setup backscatter state machine */
+
+    /* setup backscatter state machines */
     PIO pio = pio0;
-    uint sm = 0;
+    uint8_t state_machines[4] = {0, 1, 2, 3};
+    uint16_t pins[4] = {PIN_TX1, PIN_TX2, PIN_TX3, PIN_TX4};
+
     struct backscatter_config backscatter_conf;
     uint16_t instructionBuffer[32] = {0}; // maximal instruction size: 32
-    backscatter_program_init(pio, sm, PIN_TX1, PIN_TX2, CLOCK_DIV0, CLOCK_DIV1, DESIRED_BAUD, &backscatter_conf, instructionBuffer, TWOANTENNAS);
+    backscatter_program_init(pio, state_machines, pins, NUM_ANTENNAE, CLOCK_DIV0, CLOCK_DIV1, DESIRED_BAUD, &backscatter_conf, instructionBuffer);
 
     static uint8_t message[buffer_size(PAYLOADSIZE+2, HEADER_LEN)*4] = {0};  // include 10 header bytes
     static uint32_t buffer[buffer_size(PAYLOADSIZE, HEADER_LEN)] = {0}; // initialize the buffer
     static uint8_t seq = 0;
     uint8_t *header_tmplate = packet_hdr_template(RECEIVER);
     uint8_t tx_payload_buffer[PAYLOADSIZE];
+
+   /* setup phase delay parameters */
+   uint16_t phase_delay_cycles[4] = { phase_shift_to_delay_cycles( 180, CLOCK_DIV0, CLOCK_DIV1),
+                                      phase_shift_to_delay_cycles( 180, CLOCK_DIV0, CLOCK_DIV1),
+                                      phase_shift_to_delay_cycles(   0, CLOCK_DIV0, CLOCK_DIV1),
+                                      phase_shift_to_delay_cycles(   0, CLOCK_DIV0, CLOCK_DIV1)};
 
     /* Setup carrier */
     printf("\nConfiguring one CC2500 as carrier generator:\n");
@@ -138,7 +149,7 @@ int main() {
                     /* put the data to FIFO (start backscattering) */
                     startCarrier();
                     sleep_ms(1); // wait for carrier to start
-                    backscatter_send(pio,sm,buffer,buffer_size(PAYLOADSIZE, HEADER_LEN));
+                    backscatter_send(pio, state_machines, phase_delay_cycles, NUM_ANTENNAE, buffer, buffer_size(PAYLOADSIZE, HEADER_LEN));
                     sleep_ms(ceil((((double) buffer_size(PAYLOADSIZE, HEADER_LEN))*8000.0)/((double) DESIRED_BAUD))+3); // wait transmission duration (+3ms)
                     stopCarrier();
                     /* increase seq number*/ 

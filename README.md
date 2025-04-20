@@ -1,6 +1,19 @@
 # Pico-Backscatter
 An educational project on backscatter using Raspberry Pi Pico
 
+## Group 5 contributions:
+
+Our project revolves around using the 4 antennae ports on the backscatter board as a phased array. This increases the overall backscattered signal power and also allows it to either be directionally steered to maximize signal strength in a single direction, or phase-compensated in order to minimize any directional variations in signal strength due to the array geometry.
+
+Our setup uses the Firefly to generate a carrier signal at a far-field distance, and the Launchpad as a far-field receiver.
+
+Current implementation allows phasing to be set at runtime, and different phasing settings can be used for different messages.
+
+### Planned steps:
+- Modify PIO program to control a single antenna with a configurable phase delay  (DONE)
+- Run 4 SMs in a single PIO block synchronized (up to initial phase delay)        (DONE)
+- Use DMA channels to feed the PIO SMs.                                           (TODO IF NEEDED)
+
 ## --> Updates <--
 - 14.05.2024: Updated analysis script, seperating bit error rate from packet error rate.
 - 08.05.2023: Comment about the baud-rate: Notice that the baud-rate of the CC1352 is specified from 20-1000 kBaud (we tested it working as low as 30 kBaud with the backscatter setup). The CC2500 would allow for lower baud-rate configurations (specified down-to 1.2 kBaud). The timing of the state-machine is precise (no significant error or clock-difference needs to be considered).
