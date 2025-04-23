@@ -36,7 +36,8 @@ int main() {
     uint8_t *header_template = packet_hdr_template(1352);
     uint8_t tx_payload_buffer[PAYLOADSIZE];
 
-    while (true) {
+    int count = 0;
+    while (count < 256) {
         generate_data(tx_payload_buffer, PAYLOADSIZE, true);
 
         // Construct packet: header plus payload
@@ -57,6 +58,13 @@ int main() {
         sleep_ms(ceil((((double) buffer_size(PAYLOADSIZE, HEADER_LEN)) * 8000.0) / ((double)DESIRED_BAUD)) + 3);
         seq++;
         sleep_ms(TX_INTERVAL_MS);
+        
+        count++;
+        if(count >= 255){
+            printf("MAX count REACHED: %i\n EXITING...", count);
+            break;
+        }
+
     }
     
     return 0;

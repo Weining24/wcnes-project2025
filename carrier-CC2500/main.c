@@ -45,7 +45,8 @@ void main() {
     sleep_ms(1);
     printf("Started unmodulated carrier at 2450 MHz...\n");
     while (true) {
-        sleep_ms(10);
+        printf("Carrier is active...\n");
+        sleep_ms(10000);
     }
     stopCarrier(); // never reached
     printf("Stopped unmodulated carrier at 2450 MHz...\n");

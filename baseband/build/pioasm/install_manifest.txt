@@ -1,0 +1,5 @@
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm-install/pioasm/pioasm
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm-install/pioasm/pioasmTargets.cmake
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm-install/pioasm/pioasmTargets-release.cmake
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm-install/pioasm/pioasmConfig.cmake
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm-install/pioasm/pioasmConfigVersion.cmake

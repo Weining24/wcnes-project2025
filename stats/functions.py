@@ -163,3 +163,28 @@ def radar_plot(metrics):
     lines, labels = plt.thetagrids(np.degrees(label_loc), labels=categories, fontsize=18)
     plt.legend(fontsize=18, loc='upper right')
     plt.show()
+
+def compute_packet_loss(df):
+    """Compute packet loss rate based on missing sequence numbers."""
+    seqs = df['seq'].values
+    if len(seqs) == 0:
+        return 1.0  # 100% loss if nothing received
+    expected_packets = seqs.max() - seqs.min() + 1
+    # print(f"max: {seqs.max()}, min: {seqs.min()}\n")
+    received_packets = len(seqs)
+    lost_packets = expected_packets - received_packets
+    return lost_packets / expected_packets
+
+def compute_packet_error_rate(df, PACKET_LEN=32):
+    """Compute packet error rate (PER): fraction of received packets with any bit errors."""
+    if len(df) == 0:
+        return 1.0
+    error_packets = 0
+    for _, row in df.iterrows():
+        payload = parse_payload(row.payload)
+        pseudoseq = int(((payload[0]<<8) - 0) + payload[1])
+        expected_data = payload_for_peudo_seq(pseudoseq, PACKET_LEN)
+        bit_errors = compute_bit_errors(payload[2:], expected_data, PACKET_LEN=PACKET_LEN)
+        if bit_errors > 0:
+            error_packets += 1
+    return error_packets / len(df)

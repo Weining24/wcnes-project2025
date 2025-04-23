@@ -1,0 +1,7 @@
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/pioasm.dir
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/edit_cache.dir
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/rebuild_cache.dir
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/list_install_components.dir
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/install.dir
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/install/local.dir
+/home/arshavin/uu/master/WCNES_PROJ/wcnes-project2025/baseband/build/pioasm/CMakeFiles/install/strip.dir
