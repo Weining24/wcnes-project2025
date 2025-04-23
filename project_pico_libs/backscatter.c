@@ -78,12 +78,12 @@ uint8_t phase_shift_square_wave(square_wave_t *square_wave, uint16_t phase_shift
          more fine-grained phase control can be achieved by increasing d (reducing the baseband center frequency)
          (IDEA: the frequency reduction can then be compensated by overclocking the RP2040 instead)
 */
-uint16_t phase_shift_to_delay_cycles(uint16_t phase_shift, uint16_t d0, uint16_t d1) {
+uint32_t phase_shift_to_delay_cycles(uint16_t phase_shift, uint16_t d0, uint16_t d1) {
 
   phase_shift = phase_shift % 360; // wrap around
   uint16_t d = (d0 + d1)/2; // period of baseband center frequency in terms of cycles
 
-  uint16_t delay_cycles = (uint16_t) roundf( (float)phase_shift/360.0f * (float)d);
+  uint32_t delay_cycles = (uint32_t) roundf( (float)phase_shift/360.0f * (float)d);
   return delay_cycles;
 }
 
@@ -274,7 +274,7 @@ void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, 
     parameter: phase_delay_cycles <- array of phase delays, in cycles per antennae (same antennae order as pin order)
     parameter: num_antennae <- number of antennae to use (1 to 4)
 */
-void backscatter_send(PIO pio, uint8_t *state_machines, uint16_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t len) {
+void backscatter_send(PIO pio, uint8_t *state_machines, uint32_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t len) {
 
     /*
        - when the PIO program runs the first time it starts at the first instruction

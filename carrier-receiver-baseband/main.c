@@ -88,10 +88,10 @@ int main() {
     uint8_t tx_payload_buffer[PAYLOADSIZE];
 
    /* setup phase delay parameters */
-   uint16_t phase_delay_cycles[4] = { phase_shift_to_delay_cycles( 180, CLOCK_DIV0, CLOCK_DIV1),
-                                      phase_shift_to_delay_cycles( 180, CLOCK_DIV0, CLOCK_DIV1),
-                                      phase_shift_to_delay_cycles(   0, CLOCK_DIV0, CLOCK_DIV1),
-                                      phase_shift_to_delay_cycles(   0, CLOCK_DIV0, CLOCK_DIV1)};
+   uint32_t phase_delay_cycles[4] = {0,0,0,0}; /*{ phase_shift_to_delay_cycles( 0, CLOCK_DIV0, CLOCK_DIV1),
+                                      phase_shift_to_delay_cycles( 0, CLOCK_DIV0, CLOCK_DIV1),
+                                      phase_shift_to_delay_cycles( 0, CLOCK_DIV0, CLOCK_DIV1),
+                                      phase_shift_to_delay_cycles( 0, CLOCK_DIV0, CLOCK_DIV1)};*/
 
     /* Setup carrier */
     printf("\nConfiguring one CC2500 as carrier generator:\n");
