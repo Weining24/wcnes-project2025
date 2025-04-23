@@ -188,3 +188,10 @@ def compute_packet_error_rate(df, PACKET_LEN=32):
         if bit_errors > 0:
             error_packets += 1
     return error_packets / len(df)
+
+def compute_average_rssi(df): 
+    """ Compute the average RSSI value from the dataframe. """ 
+    if ("rssi" not in df.columns or len(df)) == 0:
+        return None
+    else:
+        return df["rssi"].mean()

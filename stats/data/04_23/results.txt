@@ -4,7 +4,7 @@ max: 254, min: 0
 
 Packet loss: 38.04%
 Packet error rate: 30.38%
-
+Average RSSI: -78.84810126582279
 
 ------------------------------------------
 
@@ -14,6 +14,7 @@ Data rate [bit/s]: 37.00905180		(directly impacted by missed packets)
 
 Packet loss: 21.57%
 Packet error rate: 30.00%
+Average RSSI: -79.165
 
 ------------------------------------------
 
@@ -24,3 +25,4 @@ Data rate [bit/s]: 31.20887967		(directly impacted by missed packets)
 
 Packet loss: 34.38%
 Packet error rate: 30.95%
+Average RSSI: -85.31547619047619
