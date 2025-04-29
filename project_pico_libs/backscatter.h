@@ -32,6 +32,7 @@
 #define ASM_X_REG     0x0001
 #define ASM_Y_REG     0x0002
 #define ASM_ISR_REG   0x0006
+#define ASM_WAIT_PIN  0x20A0 // WAIT 1 pin 0
 
 #ifndef PIO_BACKSCATTER
 #define PIO_BACKSCATTER
@@ -68,6 +69,6 @@ uint32_t phase_shift_to_delay_cycles(uint16_t phase_shift, uint16_t d0, uint16_t
 bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instructionBuffer, struct pio_program *backscatter_program);
 
 /* based on d0/d1/baud, the modulation parameters will be computed and returned in the struct backscatter_config */
-void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, uint8_t num_antennae, uint16_t d0, uint16_t d1, uint32_t baud, struct backscatter_config *config, uint16_t *instructionBuffer);
+void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, uint16_t pin_start_tx, uint8_t num_antennae, uint16_t d0, uint16_t d1, uint32_t baud, struct backscatter_config *config, uint16_t *instructionBuffer);
 
-void backscatter_send(PIO pio, uint8_t *state_machines, uint32_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t len);
+void backscatter_send(PIO pio, uint8_t *state_machines, uint8_t *dma_channels, uint16_t pin_start_tx, uint32_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t message_length);

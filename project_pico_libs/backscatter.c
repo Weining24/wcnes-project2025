@@ -7,6 +7,7 @@
 
 #include "backscatter.h"
 #include <math.h>
+#include "hardware/dma.h"
 
 // repeat the instruction until the desired delay has past
 int16_t repeat(uint16_t* instructionBuffer, int16_t delay, uint32_t asm_instr, uint8_t *length, uint16_t max_delay) {
@@ -95,6 +96,7 @@ uint32_t phase_shift_to_delay_cycles(uint16_t phase_shift, uint16_t d0, uint16_t
 changes from main branch:
   - delay baseband signal by appropriate number of cycles (pulled from FIFO) to emulate desired phase shift at baseband center freq.
   - removed dual antennae mode in favor of using a single SM per antenna
+  - changed program flow to first pull config settings and then wait on a GPIO pin before starting transmission
 */
 bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instructionBuffer, struct pio_program *backscatter_program) {
 
@@ -103,9 +105,9 @@ bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instru
     uint16_t OPT_SIDE_1   = 0x0000;
     uint16_t OPT_SIDE_0   = 0x0000;
 
-    uint8_t phase_delay_label = 4;
-    uint8_t get_symbol_label = 5;
-    uint8_t send_1_label = 7;
+    uint8_t phase_delay_label = 5;
+    uint8_t get_symbol_label = 6;
+    uint8_t send_1_label = 8;
     uint8_t loop_1_label = send_1_label + 1;
     int16_t lastPeriodCycles1 = (((uint32_t) CLKFREQ*1000000)/baud - 4) % ((uint32_t) d1);
     int16_t lastPeriodCycles0 = (((uint32_t) CLKFREQ*1000000)/baud - 4) % ((uint32_t) d0);
@@ -129,18 +131,23 @@ bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instru
     instructionBuffer[1] = ASM_OUT | (ASM_ISR_REG << 5);             //  1: out    isr, 32   (NOTE: 32=0)
     instructionBuffer[2] = ASM_OUT | (ASM_Y_REG   << 5);             //  2: out    y, 32     (NOTE: 32=0)
 
-    // pull phase delay (in cycles) from FIFO into register X and stall for that number of cycles
+    // pull phase delay (in cycles) from FIFO into register X
     instructionBuffer[3] = ASM_OUT | (ASM_X_REG << 5);               //  3: out    x, 32     (NOTE: 32=0)
-    instructionBuffer[4] = ASM_JMP_XMM | (0x1F & phase_delay_label); //  .phase_delay_label 4: jmp    x--, phase_delay_label
 
-    instructionBuffer[5] = ASM_OUT | (ASM_X_REG   << 5) |  1;        //  .get_symbol_label  5: out    x, 1
-    instructionBuffer[6] = ASM_JMP_NOTX | (0x1F & send_0_label);     //  6: jmp    !x, send_0_label
+    // wait until GPIO pin is triggered
+    instructionBuffer[4] = ASM_WAIT_PIN;                             // 4: wait 1 pin 0
+
+    // stall for a number of cycles corresponding to the desired phase delay
+    instructionBuffer[5] = ASM_JMP_XMM | (0x1F & phase_delay_label); //  .phase_delay_label 5: jmp    x--, phase_delay_label
+
+    instructionBuffer[6] = ASM_OUT | (ASM_X_REG   << 5) |  1;        //  .get_symbol_label  6: out    x, 1
+    instructionBuffer[7] = ASM_JMP_NOTX | (0x1F & send_0_label);     //  7: jmp    !x, send_0_label
     /*       symbol 1      */
-    instructionBuffer[7] = ASM_MOV | (ASM_X_REG << 5) | ASM_Y_REG;   //  .send_1_label  7: mov    x, y
+    instructionBuffer[8] = ASM_MOV | (ASM_X_REG << 5) | ASM_Y_REG;   //  .send_1_label  8: mov    x, y
 
-    uint8_t length = 8;
+    uint8_t length = 9;
     // full periods
-    repeat(instructionBuffer, d1/2,     ASM_SET_PINS | OPT_SIDE_1 | 1, &length, MAX_ASMDELAY);   //  .loop_1_label  8: set    pins, 1         side 1 [delay] 
+    repeat(instructionBuffer, d1/2,     ASM_SET_PINS | OPT_SIDE_1 | 1, &length, MAX_ASMDELAY);   //  .loop_1_label  9: set    pins, 1         side 1 [delay] 
     repeat(instructionBuffer, d1/2 - 1, ASM_SET_PINS | OPT_SIDE_0 | 0, &length, MAX_ASMDELAY);   //  ...: set    pins, 0         side 0 [delay] 
     instructionBuffer[length] = ASM_JMP_XMM | (0x1F & loop_1_label);                             //  ...: jmp    x--, loop_1_label
     length++;
@@ -186,7 +193,7 @@ bool generatePIOprogram(uint16_t d0,uint16_t d1, uint32_t baud, uint16_t* instru
     parameter: pins <- array of pin id's, mapping to each state machine
     parameter: num_antennae <- number of antennae to use (1 to 4)
 */
-void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, uint8_t num_antennae, uint16_t d0, uint16_t d1, uint32_t baud, struct backscatter_config *bs_config, uint16_t *instructionBuffer) {
+void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, uint16_t pin_start_tx, uint8_t num_antennae, uint16_t d0, uint16_t d1, uint32_t baud, struct backscatter_config *bs_config, uint16_t *instructionBuffer) {
 
     pio_set_sm_mask_enabled(pio, 0xF, false); // stop state machines (if running)
 
@@ -205,6 +212,11 @@ void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, 
         baud = baud_new;
     }
 
+    // initialize state machine synchronization GPIO pin to be low
+    gpio_init(pin_start_tx);
+    gpio_set_dir(pin_start_tx, GPIO_OUT);
+    gpio_put(pin_start_tx, 0);
+
     // generate pio-program
     struct pio_program backscatter_program;
     generatePIOprogram(d0, d1, baud, instructionBuffer, &backscatter_program);
@@ -221,6 +233,8 @@ void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, 
     for(int i = 0; i < num_antennae; i++) {
        pio_gpio_init(pio, pins[i]);
        pio_sm_set_consecutive_pindirs(pio, state_machines[i], pins[i], 1, true);
+       // pio_gpio_init(pio, pin_start_tx); // NOTE: not needed for input pins
+       pio_sm_set_consecutive_pindirs(pio, state_machines[i], pin_start_tx, 1, false);
     }
 
     // compute number of periods per symbol
@@ -229,18 +243,22 @@ void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, 
 
     pio_sm_config config[num_antennae];
     for(int i = 0; i < num_antennae; i++) {
+
       // setup default state-machine config
       config[i] = pio_get_default_sm_config();
       sm_config_set_wrap(&config[i], offset, offset + backscatter_program.length-1);
+
       // setup specific state-machine config
+      sm_config_set_in_pins(&config[i], pin_start_tx);
       sm_config_set_set_pins(&config[i], pins[i], 1);
       sm_config_set_fifo_join(&config[i], PIO_FIFO_JOIN_TX); // We only need TX, so get an 8-deep FIFO (join RX and TX FIFO)
       sm_config_set_out_shift(&config[i], false, true, 32);  // OUT shifts to left (MSB first), autopull after every 32 bit
       pio_sm_init(pio, state_machines[i], offset, &config[i]);
 
-      // feed TX FIFOs with symbol durations
+      // feed TX FIFOs with symbol durations (in terms of periods)
       pio_sm_put_blocking(pio, state_machines[i], reps0);
       pio_sm_put_blocking(pio, state_machines[i], reps1);
+
     }
 
     // compute configuration parameters
@@ -264,17 +282,19 @@ void backscatter_program_init(PIO pio, uint8_t *state_machines, uint16_t *pins, 
 }
 
 
-// TODO: setup DMA channels to feed Tx FIFOs (if necessary after testing, might not be needed though!)
+
 /*
     changes from main branch:
     - changed to accomodate a configurable number of antennae (1 to 4), each controlled by a separate sm in the same PIO block    
     - the state machines are (re)started in sync (at the phase delay loop) each time a new message is sent
+    - the message is fed to the state machines using DMA channels (which prevents TX FIFO stalling at 100 kBaud)
 
-    parameter: sm <- array of claimed state machine id's (maximum of 4 due to residing inside a single PIO block)
+    parameter: state_machines <- array of claimed state machine id's (maximum of 4 due to residing inside a single PIO block)
+    parameter: dma_channels <- array of claimed DMA channels (one per state machine)
     parameter: phase_delay_cycles <- array of phase delays, in cycles per antennae (same antennae order as pin order)
     parameter: num_antennae <- number of antennae to use (1 to 4)
 */
-void backscatter_send(PIO pio, uint8_t *state_machines, uint32_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t len) {
+void backscatter_send(PIO pio, uint8_t *state_machines, uint8_t *dma_channels, uint16_t pin_start_tx, uint32_t *phase_delay_cycles, uint8_t num_antennae, uint32_t *message, uint32_t message_length) {
 
     /*
        - when the PIO program runs the first time it starts at the first instruction
@@ -292,25 +312,61 @@ void backscatter_send(PIO pio, uint8_t *state_machines, uint32_t *phase_delay_cy
       */
       pio_set_sm_mask_enabled(pio, 0xF, false);
       for(int i = 0; i < num_antennae; i++) {
+        /*
+        pio_sm_clear_fifos(pio, state_machines[i]);
+        const uint32_t fdebug_sm_mask =
+            (1u << PIO_FDEBUG_TXOVER_LSB) |
+            (1u << PIO_FDEBUG_RXUNDER_LSB) |
+            (1u << PIO_FDEBUG_TXSTALL_LSB) |
+            (1u << PIO_FDEBUG_RXSTALL_LSB);
+        pio->fdebug = fdebug_sm_mask << state_machines[i];
+        pio_sm_restart(pio, state_machines[i]);
+        */
         pio_sm_exec(pio, state_machines[i], ASM_JMP | 3);
       }
-      first_call = false;
     }
+    first_call = false;
 
+    gpio_put(pin_start_tx, 0); // set sync pin to low, meaning that SMs will only pull config settings from TX FIFO
+
+    // feed TX FIFOs with phase delays
     for(int i = 0; i < num_antennae; i++) {
-      // feed TX FIFOs with phase delays
       pio_sm_put_blocking(pio, state_machines[i], phase_delay_cycles[i]);
-
-      // put the first word of the message into all TX FIFOs, so that transmissions can begin immediately in sync
-      pio_sm_put_blocking(pio, state_machines[i], message[0]);
     }
 
-    pio_enable_sm_mask_in_sync(pio, 0xF); // start all state machines in sync
+    pio_enable_sm_mask_in_sync(pio, 0xF); // start SMs, making TX FIFOs empty to fit the message
 
-    for(uint32_t i = 1; i < len; i++){
-      for(int j = 0; j < num_antennae; j++) {
-        pio_sm_put_blocking(pio, state_machines[j], message[i]); // refill all TX FIFOs using the CPU (TODO: use DMA instead)
-      }
+    // setup DMA channels to auto-feed the message to the TX FIFOs (faster than using the CPU to do it if packets are large)
+    dma_channel_config dma_config[num_antennae];
+    for(int i = 0; i < num_antennae; i++) {
+      dma_config[i] = dma_channel_get_default_config(dma_channels[i]);
+      channel_config_set_read_increment(&dma_config[i], true); // increment read address after each word
+      channel_config_set_write_increment(&dma_config[i], false); // always write to same location (TX FIFO)
+      channel_config_set_dreq(&dma_config[i], pio_get_dreq(pio, state_machines[i], true)); // pace with TX FIFO DREQs
+      channel_config_set_transfer_data_size(&dma_config[i], DMA_SIZE_32);// 32-bit transfers
+      dma_channel_configure(dma_channels[i],
+                            &dma_config[i],
+                            &pio->txf[state_machines[i]], // write to TX FIFO
+                            message,                      // read from message buffer
+                            message_length,               // number of 32-bit transfers
+                            true);                        // start transfer now
     }
-    sleep_ms(1); // wait for transmission to finish
+
+
+    /* wait for DMA transfers to finish completely before starting the transmissions
+       NOTE: this limits packets to be <= 32 bytes, but allows very high baud rates without risk of FIFO stalling
+             an alterative would be to only wait for TX FIFOs to be filled (without blocking)
+    */
+    for(int i = 0; i < num_antennae; i++) {
+      dma_channel_wait_for_finish_blocking(dma_channels[i]);
+    }
+
+    gpio_put(pin_start_tx, 1); // start phase delays + transmissions in sync by setting sync pin to high
+
+    // NOTE: this would be a good place to wait for transmissions to complete, but not doing so allows the CPU to do other stuff now
+
+    // cleanup DMA channels for reuse
+    for(int i = 0; i < num_antennae; i++) {
+      dma_channel_cleanup(dma_channels[i]);
+    }
 }

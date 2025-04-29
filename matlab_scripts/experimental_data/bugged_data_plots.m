@@ -1,15 +1,7 @@
 %%% script to process and plot data from experiments I made at home
 
 %%% read SmartRF studio logs
-
-load experiments_home_data.mat
-
-% dual_ref = readtable("experiments_home/linear_geometry_25+3+28_cm_two_antennae_reference", FileType="delimitedtext", ReadVariableNames=false);
-% quad_ref = readtable("experiments_home/linear_geometry_25+3+28_cm_four_antennae_reference", FileType="delimitedtext", ReadVariableNames=false);
-% quad_0_0_0_0 = readtable("experiments_home/linear_geometry_25+3+28_cm_four_antennae_0_0_0_0", FileType="delimitedtext", ReadVariableNames=false);
-% quad_0_0_90_90 = readtable("experiments_home/linear_geometry_25+3+28_cm_four_antennae_0_0_90_90", FileType="delimitedtext", ReadVariableNames=false);
-% quad_0_0_180_180 = readtable("experiments_home/linear_geometry_25+3+28_cm_four_antennae_0_0_180_180", FileType="delimitedtext", ReadVariableNames=false);
-% quad_0_0_270_270 = readtable("experiments_home/linear_geometry_25+3+28_cm_four_antennae_0_0_270_270", FileType="delimitedtext", ReadVariableNames=false);
+load experiments_bugged_data
 
 %%% Extract RSSI
 
