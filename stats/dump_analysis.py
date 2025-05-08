@@ -16,8 +16,8 @@ NUM_16RND = (PAYLOADSIZE - 2) // 2  # How many 16-bit random numbers are include
 MAX_SEQ = 256  # Maximum sequence number defined by the length of the seq, the length of seq is 1B
 
 # Folder containing the data files
-folder_path = 'data/testday'
-
+# folder_path = 'data/testday'
+folder_path = 'data/day2'
 
 packet_loss_dict = {}
 
@@ -84,3 +84,5 @@ for filename in os.listdir(folder_path):
 
 # Print the packet loss results
 print(f'Packet loss dictionary: {packet_loss_dict}')
+
+print(f"\nFREQS: {packet_loss_dict.keys()}")
