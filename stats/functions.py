@@ -189,6 +189,12 @@ def compute_packet_error_rate(df, PACKET_LEN=32):
             error_packets += 1
     return error_packets / len(df)
 
+def count_rows_in_file(filepath):
+    """Returns the number of rows (lines) in the specified file."""
+    with open(filepath, 'r') as f:
+        return sum(1 for _ in f)
+
+
 def compute_average_rssi(df): 
     """ Compute the average RSSI value from the dataframe. """ 
     if ("rssi" not in df.columns or len(df)) == 0:

@@ -17,7 +17,7 @@ MAX_SEQ = 256  # Maximum sequence number defined by the length of the seq, the l
 
 # Folder containing the data files
 # folder_path = 'data/testday'
-folder_path = 'data/day2'
+folder_path = 'data/bt_interference_test/bt_test'
 
 packet_loss_dict = {}
 
@@ -68,19 +68,34 @@ for filename in os.listdir(folder_path):
         print(f"Data rate [bit/s]: {(len(df) * NUM_16RND * 2 / file_delay_s):.8f}\t\t(directly impacted by missed packets)")
 
     packet_loss = compute_packet_loss(df)
-    per = compute_packet_error_rate(df)
+    # per = compute_packet_error_rate(df)
     avg_rssi = compute_average_rssi(df)
 
+    # TEMPORÄR FÖR TEST --> FIXA BERÄKNING AV RECEIVED PACKETS
+    # I NULÄGET SÅ FILTERAR VI INTE RESULTATET I FILEN (ELLER??) --> tas de långa resultaten och annat bort??
+    tot_rows = count_rows_in_file(file_path) 
+    
     print(f"Packet loss: {packet_loss * 100:.2f}%")
-    print(f"Packet error rate: {per * 100:.2f}%")
+    # print(f"Packet error rate: {per * 100:.2f}%")
     print(f"Average RSSI: {avg_rssi}")
 
     # Extract frequency from the filename
     frequency = get_freq_from_filename(filename)
+
     if frequency is not None:
-        packet_loss_dict[frequency] = packet_loss * 100
+        if frequency in packet_loss_dict:
+            packet_loss_dict[frequency].append(tot_rows) #.append(per * 100) #.append(avg_rssi) #.append(packet_loss * 100)
+        else:
+            packet_loss_dict[frequency] = [tot_rows] #[per * 100] #[avg_rssi] #[packet_loss * 100]
 
     idx += 1
+
+
+# computing the mean value of the results for each frequency...
+for freq in packet_loss_dict:
+    values = packet_loss_dict[freq]
+    packet_loss_dict[freq] = sum(values) / len(values) if values else 0.0
+
 
 # Print the packet loss results
 print(f'Packet loss dictionary: {packet_loss_dict}')
