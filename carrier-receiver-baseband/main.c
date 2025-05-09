@@ -104,8 +104,9 @@ int main() {
     printf("started listening\n");
     bool rx_ready = true;
 
+    int count = 0;
     /* loop */
-    while (true) {
+    while (count < 100) {
         evt = get_event();
         switch(evt){
             case rx_assert_evt:
@@ -143,12 +144,15 @@ int main() {
                     stopCarrier();
                     /* increase seq number*/ 
                     seq++;
+                    count++;
                 }
                 sleep_ms(TX_DURATION);
             break;
         }
         sleep_ms(1);
     }
+
+    printf("100 packets have been sent, stopping...\n");
 
     /* stop carrier and receiver - never reached */
     RX_stop_listen();

@@ -1,0 +1,125 @@
+picocom v3.1
+
+port is        : /dev/ttyACM0
+flowcontrol    : none
+baudrate is    : 115200
+parity is      : none
+databits are   : 8
+stopbits are   : 1
+escape is      : C-a
+local echo is  : no
+noinit is      : no
+noreset is     : no
+hangup is      : no
+nolock is      : no
+send_cmd is    : sz -vv
+receive_cmd is : rz -vv -E
+imap is        : 
+omap is        : 
+emap is        : crcrlf,delbs,
+logfile is     : none
+initstring     : none
+exit_after is  : not set
+exit is        : no
+
+Type [C-a] [C-h] to see available commands
+Terminal ready
+Computed baseband settings: 
+- baudrate: 100000
+- Center offset: 6597222
+- deviation: 347222
+- RX Bandwidth: 794444
+
+Configuring one CC2500 as carrier generator:
+set tx f_carrier [6175507 0 0 0] 2449999725
+
+Configuring one CC2500 to approximate the obtained radio settings:
+set rx f_carrier [6192136 0 0 0] 2456596923
+set rx f_dev: [7 5] 355468
+set rx r_data: [11 248] 99975
+set rx bw: [0 0] 812500
+started listening
+00:00:05.286 | 0f 00 00 00 13 5d 1f 43 1b 45 25 6f 21 fe 0f 7e | -61 CRC error
+00:00:05.552 | 0f 01 00 0c 20 6b 2b b0 24 4b 26 55 1a 56 22 e8 | -61 CRC error
+00:00:05.818 | 0f 02 00 18 14 20 1f 30 25 19 1a 14 23 a8 23 8c | -61 CRC error
+00:00:06.085 | 0f 03 00 24 19 e2 17 c2 25 4e 1f 4c 27 a4 31 bf | -62 CRC error
+00:00:06.351 | 0f 04 00 30 1c 08 23 fc 17 c2 22 1b 1c e4 25 de | -62 CRC error
+00:00:06.617 | 0f 05 00 3c 20 56 1c 27 1e 24 17 07 1a 80 27 e6 | -63 CRC error
+00:00:06.883 | 0f 06 00 48 2a 98 00 00 00 00 02 00 00 00 00 00 | -62 CRC error
+00:00:07.409 | 0f 08 00 60 16 6d 12 10 22 7b 2c 67 11 f6 1f a4 | -61 CRC error
+00:00:07.675 | 0f 09 00 6c 12 ef 22 26 29 73 31 88 26 2d 1e 06 | -62 CRC error
+00:00:07.941 | 0f 0a 00 78 20 2d 2b f3 19 7d 20 ab 19 6b 0e 36 | -62 CRC error
+00:00:08.207 | 00 0a 00 78 20 2d 2b f3 19 7d 20 ab 19 6b 0e 36 11 00 58 89 fb 14 93 b8 94 e9 89 55 28 7d 20 57 40 66 2e 82 a1 24 3d 24 fe 3a 26 3e 26 1e 25 b3 99 88 b3 cb ef d2 fe fb 9d e6 81 e6 6a 7d 00 00 | -34 CRC error
+00:00:08.476 | 0f 0c 00 90 20 4f 20 cd 31 6b 1d d7 14 34 1f f0 | -61 CRC error
+00:00:08.742 | 0f 0d 00 9c 31 bc 2d 44 20 a6 12 42 21 f3 20 51 | -61 CRC error
+00:00:09.008 | 0f 0e 00 a8 11 0e 25 a4 20 c1 23 31 21 d2 13 7a | -62 CRC error
+00:00:09.275 | 0f 0f 00 b4 1f b9 1d 5e 20 ef 2b 95 25 60 27 37 | -63 CRC error
+00:00:09.541 | 0f 10 00 c0 1f 9a 2c 71 21 2c 21 7f 1e f7 24 92 | -63 CRC error
+00:00:09.807 | 0f 11 00 cc 21 17 2d 98 26 9a 14 08 1e 5a 1c c6 | -62 CRC error
+00:00:10.332 | 0f 13 00 e4 2d 5b 20 66 27 a2 25 65 1d 8c 23 54 | -61 CRC error
+00:00:10.599 | 0f 14 00 f0 26 53 2f 37 1b cc 20 5d 21 a9 22 38 | -62 CRC error
+00:00:10.865 | 0f 15 00 fc 14 8d 10 8a 19 f2 28 e8 16 b1 20 34 | -62 CRC error
+00:00:11.131 | 0f 16 01 08 28 0e 1e 72 20 80 00 00 00 00 0a 00 | -62 CRC error
+00:00:11.657 | 0f 18 01 20 28 4f 17 0e 2b d1 28 60 24 09 13 7e | -62 CRC error
+00:00:11.923 | 0f 19 01 2c 1c dd 13 f7 2d 6b 1a 7e 1a 33 12 42 | -62 CRC error
+00:00:12.189 | 0f 1a 01 38 21 7d 1f 3d 1f 75 2a f7 1b cb 26 f9 | -63 CRC error
+00:00:12.456 | 2c 00 00 40 00 00 20 01 00 40 00 00 00 00 00 00 00 00 00 00 00 10 00 00 00 00 00 00 00 00 00 01 1c 55 5a 78 88 42 20 b1 be 32 2a fb 16 | -64 CRC error
+00:00:12.982 | 0f 1d 01 5c 22 c3 26 a3 21 26 23 34 24 9b 28 e6 | -63 CRC error
+00:00:13.249 | 0f 1e 01 68 19 d1 29 b7 22 c3 13 a2 19 89 18 08 | -62 CRC error
+00:00:13.774 | 0f 20 01 80 24 0e 1d 94 23 52 1a ec 11 6f 21 0b | -60 CRC error
+00:00:14.040 | 0f 21 01 8c 24 3d 2d 35 1f 9a 1f c8 15 bb 23 8b | -63 CRC error
+00:00:14.307 | 0f 22 01 98 1e 7f 2f 7a 2c 16 2b 3f 1b 4a 20 f0 | -62 CRC error
+00:00:14.573 | 0f 23 01 a4 27 aa 20 00 14 04 00 00 00 00 00 00 | -62 CRC error
+00:00:15.098 | 0f 25 01 bc 1c 41 13 af 20 61 21 60 11 14 16 d0 | -61 CRC error
+00:00:15.365 | 0f 26 01 c8 13 42 22 4a 27 f1 0e ec 26 1b 28 d6 | -63 CRC error
+00:00:15.631 | 0f 27 01 d4 25 68 1c 00 2b a1 1d 15 26 f9 2a 38 | -63 CRC error
+00:00:16.156 | 0f 29 01 ec 13 ae 1f 56 16 d8 19 31 25 dd 24 2a | -61 CRC error
+00:00:16.423 | 0f 2a 01 f8 23 b0 1d 16 26 f1 22 60 1d e0 24 ad | -61 CRC error
+00:00:16.689 | 0f 2b 02 04 15 b4 26 48 3a f5 25 94 1a 07 21 5a | -61 CRC error
+00:00:16.955 | 0f 2c 02 10 19 67 14 cd 22 00 00 00 00 00 00 80 | -61 CRC error
+00:00:17.481 | 0f 2e 02 28 1e 56 0e 8d 20 a2 22 d0 1a d9 1b 0c | -61 CRC error
+00:00:17.747 | 0f 2f 02 34 14 8a 2e 28 24 44 1c 4b 0f 9e 23 8f | -62 CRC error
+00:00:18.013 | 0f 30 02 40 28 01 2d 49 1e 88 18 08 1c 1c 19 f4 | -62 CRC error
+00:00:18.279 | 0e 00 00 00 00 02 10 80 00 00 01 00 00 04 00 | -61 CRC error
+00:00:18.805 | 0f 33 02 64 1a c7 2a 2a 1f 01 18 65 2b de 15 9a | -62 CRC error
+00:00:19.071 | 0f 34 02 70 24 74 20 fc 18 00 21 7c 1a b5 14 cb | -61 CRC error
+00:00:19.337 | 0f 35 02 7c 22 03 1e 32 2a 94 24 70 10 00 08 00 | -62 CRC error
+00:00:19.863 | 0f 37 02 94 26 a9 1b e4 1a a1 1e be 1d 86 1b ed | -60 CRC error
+00:00:20.129 | 0f 38 02 a0 26 04 20 c4 20 c6 21 5d 24 4f 17 f6 | -62 CRC error
+00:00:20.396 | 0f 39 02 ac 11 37 24 81 1f 3a 1e 83 16 17 1d 92 | -65 CRC error
+00:00:20.662 | 0f 3a 02 90 10 00 10 00 00 00 10 00 10 a0 00 00 | -63 CRC error
+00:00:21.187 | 0f 3c 02 d0 1d eb 1e f3 1b 89 27 6b 1f b6 23 c4 | -60 CRC error
+00:00:21.454 | 0f 3d 02 dc 25 11 27 b4 1a 1b 22 2a 26 83 1e 6c | -62 CRC error
+00:00:21.720 | 0f 3e 02 e8 23 e7 25 a2 19 6c 29 c9 24 2f 00 28 | -62 CRC error
+00:00:22.245 | 0f 40 03 00 1e 36 18 c2 22 cd 29 d2 19 38 1a 62 | -60 CRC error
+00:00:22.512 | 0f 41 03 0c 1f 10 17 51 25 b3 1e 41 2f 64 26 b5 | -62 CRC error
+00:00:22.778 | 0f 42 03 18 16 c2 0b 22 24 10 16 19 22 12 0e 6e | -62 CRC error
+00:00:23.044 | 0f 43 03 24 18 24 00 00 00 00 00 08 00 02 00 00 | -62 CRC error
+00:00:23.570 | 0f 45 03 3c 20 ff 34 a4 21 cd 24 09 1c f0 27 3e | -60 CRC error
+00:00:23.836 | 0f 46 03 48 1f 27 1b 9b 16 18 1b 0d 1e fd 2b 0a | -61 CRC error
+00:00:24.102 | 0f 47 03 54 16 cf 1a dd 25 b2 26 92 27 0d 20 bb | -62 CRC error
+00:00:24.628 | 0f 49 03 6c 1b 47 23 73 26 c8 1f 55 13 a5 22 c0 | -61 CRC error
+00:00:24.894 | 0f 4a 03 78 0a 5e 23 d0 17 3c 22 41 21 d9 2f 8b | -63 CRC error
+00:00:25.160 | 0f 4b 03 84 1d 57 1d 29 19 4a 20 69 28 56 18 6c | -62 CRC error
+00:00:25.426 | 0f 4c 03 90 19 24 22 c0 1c 24 26 00 22 e4 00 00 | -62 CRC error
+00:00:25.951 | 0f 4e 03 a8 28 9c 12 9c 14 9b 1a 14 1a bd 1a 3c | -62 CRC error
+00:00:26.218 | 0f 4f 03 b4 1c e5 22 0f 21 ed 22 4c 19 2a 28 35 | -63 CRC error
+00:00:26.484 | 0f 50 03 c0 1e 56 20 e6 13 92 1d f4 1c d2 24 fd | -62 CRC error
+00:00:26.750 | 0f 51 03 cc 1c 04 30 50 00 00 00 00 1c 00 00 00 | -63 CRC error
+00:00:27.276 | 0f 53 03 e4 24 f2 18 56 20 49 1f b0 2c c8 1c 2b | -64 CRC error
+00:00:27.542 | 0f 54 03 f0 29 43 1d 55 25 be 1b bb 1b 87 1f 30 | -63 CRC error
+00:00:27.808 | 0f 55 03 fc 1f 4b 20 a1 25 62 11 7e 29 14 1f 3b | -62 CRC error
+00:00:28.074 | 0f 56 04 00 00 00 00 00 28 00 00 00 06 68 00 00 | -62 CRC error
+00:00:28.600 | 0f 58 04 20 1b 6b 17 05 32 69 18 c0 1e 3a 26 d3 | -63 CRC error
+00:00:28.866 | 0f 59 04 2c 23 39 1d c5 28 41 25 87 28 03 21 d9 | -62 CRC error
+00:00:29.132 | 0f 5a 04 38 28 59 22 ea 1a 18 26 ee 22 79 10 14 | -62 CRC error
+00:00:29.658 | 0f 5c 04 50 22 6b 1d 47 1c 93 32 40 25 95 2c 4f | -62 CRC error
+00:00:29.924 | 0f 5d 04 5c 1f 73 20 42 26 28 14 5e 1e 3e 29 b9 | -62 CRC error
+00:00:30.190 | 0f 5e 04 68 1d c1 28 f6 2c 2a 1a c3 11 57 29 51 | -62 CRC error
+00:00:30.456 | 0f 5f 04 74 2a 76 08 00 00 00 00 00 03 80 00 09 | -64 CRC error
+00:00:30.982 | 0f 61 04 8c 30 04 29 76 1c 88 18 1a 27 f7 1e 55 | -63 CRC error
+00:00:31.248 | 0f 62 04 98 0e de 21 93 1e 36 17 7f 35 78 26 4a | -63 CRC error
+100 packets have been sent, stopping...
+
+Terminating...
+Thanks for using picocom
