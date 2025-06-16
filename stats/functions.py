@@ -60,13 +60,16 @@ def popcount(n):
 
 # compare the received frame and transmitted frame and compute the number of bit errors
 def compute_bit_errors(payload, sequence, PACKET_LEN=32):
+    """Compute number of bit errors between received and expected data"""
+    # Ensure both arrays have the same length
+    min_len = min(len(payload), len(sequence), PACKET_LEN)
+    payload_trunc = np.array(payload[:min_len])
+    sequence_trunc = np.array(sequence[:min_len])
+    
     return sum(
         map(
             popcount,
-            (
-                np.array(payload[:PACKET_LEN])
-                ^ np.array(sequence[: len(payload[:PACKET_LEN])])
-            ),
+            (payload_trunc ^ sequence_trunc)
         )
     )
 
@@ -133,14 +136,24 @@ def compute_ber_packet(df_row, PACKET_LEN=32):
 
 # main function to compute the BER for each frame, return both the error statistics dataframe and in total BER for the received data
 def compute_ber(df, PACKET_LEN=32):
-    # seq number initialization
-    print(f"The total number of packets transmitted by the tag is {df.seq[len(df)-1]+1}.")
-    if len(df) > 0:
-        errors,total = zip(*[compute_ber_packet(row,PACKET_LEN) for (_,row) in df.iterrows()])
-        return sum(errors)/sum(total)
-    else:
+    """Improved BER calculation with safe index handling"""
+    if len(df) == 0:
         print("Warning, the log-file seems empty.")
         return 0.5
+    
+    # Safe index access using iloc
+    last_seq = df.seq.iloc[-1] if len(df) > 0 else 0
+    print(f"The total number of packets transmitted by the tag is {last_seq + 1}.")
+    
+    total_errors = 0
+    total_bits = 0
+    
+    for _, row in df.iterrows():
+        errors, bits = compute_ber_packet(row, PACKET_LEN)
+        total_errors += errors
+        total_bits += bits
+    
+    return total_errors / total_bits if total_bits > 0 else 0.0
 
 # plot radar chart
 def radar_plot(metrics):

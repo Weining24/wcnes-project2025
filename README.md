@@ -37,3 +37,24 @@ sleep 2;
 picocom -b 115200 /insert/your/patj;
 ```
 
+
+# 1. Create the virtual environment
+python3 -m venv myenv
+
+# 2. Activate the virtual environment
+source myenv/bin/activate
+
+# 3. Install pyserial
+pip install pyserial
+
+# 4. (Optional) Verify installation
+pip show pyserial
+
+
+# to run
+1. mkdir build
+2. cd build
+3. cmake ..
+4. make
+# wcnesWorking
+# wcnesWorking

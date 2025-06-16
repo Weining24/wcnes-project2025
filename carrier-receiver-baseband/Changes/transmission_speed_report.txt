@@ -1,0 +1,8 @@
+Analyzed file: Realdata/Double_Baud/hamming_11b.txt
+Total packets: 999
+Total bytes: 35961
+Header bytes: 3996
+Payload bytes: 31965
+Duration: 00:07:07.029 - 00:03:42.744
+Total transmission time: 3 min 24.285 sec
+Average speed: 176.03 Bytes/sec (1408.27 bits/sec)

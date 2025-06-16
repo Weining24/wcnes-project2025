@@ -65,25 +65,42 @@ uint16_t generate_sample(){
  * length: the length of the buffer which can be filled with data
 */
 void generate_data(uint8_t *buffer, uint8_t length, bool include_index) {
+    static const uint8_t encoded_payloads[3][32] = {
+        { 0x69, 0x70, 0x55, 0x69, 0x5a, 0x70, 0x70, 0x7f, 0x00, 0x0f, 0x16, 0x19, 0x25, 0x2a, 0x33, 0x3c, 0x43, 0x4c, 0x55, 0x5a, 0x66, 0x69, 0x70, 0x7f, 0x0f, 0x00, 0x19, 0x16, 0x2a, 0x25, 0x3c, 0x33 },
+        { 0x0f, 0x0f, 0x16, 0x16, 0x19, 0x19, 0x25, 0x25, 0x2a, 0x2a, 0x33, 0x33, 0x3c, 0x3c, 0x43, 0x43, 0x4c, 0x4c, 0x55, 0x55, 0x5a, 0x5a, 0x66, 0x66, 0x69, 0x69, 0x70, 0x70, 0x7f, 0x7f, 0x00, 0x00},
+        { 0x0f, 0x16, 0x19, 0x25, 0x2a, 0x33, 0x3c, 0x43, 0x4c, 0x55, 0x5a, 0x66, 0x69, 0x70, 0x7f, 0x00, 0x16, 0x0f, 0x25, 0x19, 0x33, 0x2a, 0x43, 0x3c, 0x55, 0x4c, 0x66, 0x5a, 0x70, 0x69, 0x00, 0x7f}
+    };
+    static int payload_index = 0;
+    int num_payloads = sizeof(encoded_payloads) / sizeof(encoded_payloads[0]);
+
     if(length % 2 != 0){
         printf("WARNING: generate_data has been used with an odd length.");
     }
 
     uint8_t data_start = 0;
     if(include_index){
-        buffer[0]   = (uint8_t) (file_position >> 8);
+        buffer[0] = (uint8_t) (file_position >> 8);
         buffer[1] = (uint8_t) (file_position & 0x00FF);
         data_start = 2;
     }
-    for (uint8_t i=data_start; i < length; i=i+6) {
-        uint16_t sample = generate_sample();
-        buffer[i]   = (uint8_t) (sample >> 8);
-        buffer[i+1] = (uint8_t) (sample & 0x00FF);
-        buffer[i+2]   = (uint8_t) (sample >> 8);
-        buffer[i+3] = (uint8_t) (sample & 0x00FF);
-        buffer[i+4]   = (uint8_t) (sample >> 8);
-        buffer[i+5] = (uint8_t) (sample & 0x00FF);
+
+    // Select the current encoded payload
+    const uint8_t* static_payload = encoded_payloads[payload_index];
+
+    // Copy encoded payload to buffer (truncate or repeat as needed)
+    uint8_t payload_len = length - data_start;
+    if (payload_len > 32) {
+        payload_len = 32;
     }
+    memcpy(&buffer[data_start], static_payload, payload_len);
+
+    // If the payload is shorter than requested, pad the rest with zeros
+    for (uint8_t i = data_start + payload_len; i < length; i++) {
+        buffer[i] = 0;
+    }
+
+    // Move to the next payload for next call
+    payload_index = (payload_index + 1) % num_payloads;
 }
 
 /* including a header to the packet:

@@ -61,3 +61,6 @@ Example: set the carrier to 2450MHz
 
 ## Reference
 [Zolertia Firefly Datasheet](https://github.com/Zolertia/Resources/blob/master/Firefly/Hardware/Revision%20A/Datasheets/ZOL-BO001-A2%20-%20Firefly%20revision%20A%20Datasheet%20v.1.0.0.pdf)
+
+
+python3 -m serial.tools.miniterm -e /dev/tty.usbserial-2110 115200

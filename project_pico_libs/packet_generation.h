@@ -14,7 +14,7 @@
 #include "pico/stdlib.h"
 #include "packet_generation.h"
 
-#define PAYLOADSIZE 14*3+2
+#define PAYLOADSIZE 34
 #define HEADER_LEN  10 // 8 header + length + seq
 #define buffer_size(x, y) (((x + y) % 4 == 0) ? ((x + y) / 4) : ((x + y) / 4 + 1)) // define the buffer size with ceil((PAYLOADSIZE+HEADER_LEN)/4)
 

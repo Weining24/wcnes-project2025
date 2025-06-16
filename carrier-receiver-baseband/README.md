@@ -75,3 +75,23 @@ nmake
 ## Reference
 [Raspberry Pi Pico SDK Libraries and tools for C/C++ development on RP2040 microcontrollers](https://datasheets.raspberrypi.com/pico/raspberry-pi-pico-c-sdk.pdf).
 <br>The details about PIO, please refer to [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf).
+
+
+# 1. Create the virtual environment
+python3 -m venv myenv
+
+# 2. Activate the virtual environment
+source myenv/bin/activate
+
+# 3. Install pyserial
+pip install pyserial
+
+# 4. (Optional) Verify installation
+pip show pyserial
+
+
+# to run
+1. mkdir build
+2. cd build
+3. cmake ..
+4. make
