@@ -29,6 +29,7 @@
 
 #include "hardware/uart.h"
 #include "hardware/irq.h"
+#include "hardware/gpio.h"
 #include "hardware/adc.h"
 
 /// \tag::uart_advanced[]
@@ -198,6 +199,14 @@ void test_my_read(size_t len) {
     // 发起请求 (REQ 低->高 上升沿)
     gpio_put(PIN_REQ, 1);
     printf("REQ set high\n");
+
+
+        //IND signal检查
+    if (gpio_get(PIN_IND)) {
+        printf("Buffer is not empty.\n");
+    } else {
+        printf("Buffer is empty\n");
+    }
     
     // 等待 ACK 高 (带超时)
     if (wait_for_signal(PIN_ACK, 1, TIMEOUT_MS)) {
@@ -217,12 +226,12 @@ void test_my_read(size_t len) {
     memset(rx_data, 0, len); // 清空接收缓冲区
     spi_read_blocking(MY_SPI_PORT, 0, rx_data, len);
     printf("Read %d bytes from SPI:\n", len);
-    // for (size_t i = 0; i < len; ++i) {
-    //     printf("%c", rx_data[i]);
-    //     if ((i + 1) % 16 == 0) {
-    //         printf("\n");
-    //     }
-    // }
+    for (size_t i = 0; i < len; ++i) {
+        printf("%c", rx_data[i]);
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
     
     // 结束传输 (REQ 高->低 下降沿)
     gpio_put(PIN_REQ, 0);
@@ -271,7 +280,7 @@ void init_gpio() {
     printf("GPIO initialized\n");
 }
 // RX interrupt handler
-void on_uart_rx() {
+int on_uart_rx() {
     uint16_t rx_index = 0;
     uint8_t rx_buffer[UART_BUFFER_SIZE] = {0};
     while (uart_is_readable(UART_ID)) {
@@ -302,7 +311,7 @@ void on_uart_rx() {
     int received_value = 0;
     if (sscanf((const char *)rx_buffer, "%d", &received_value) == 1) {
         printf("Received integer value: %d\n", received_value);
-    return received_value;
+        return received_value;
     } else {
         printf("Failed to parse integer from received data.\n");
         return -1; // or some error code
@@ -412,11 +421,13 @@ int main() {
     init_gpio();
     while(1){
         test_my_write(test_data, test_len);
-        sleep_ms(2500); // 等待1秒
+        sleep_ms(5000); // 等待1秒
         test_my_read(test_len);
         // test_my_read();
         // test_write_only();
-        sleep_ms(2500); // 等待5秒
+        sleep_ms(5000); // 等待5秒
+        test_my_read(test_len);
+        sleep_ms(5000); // 等待5秒
     }
 
     // while(1){
