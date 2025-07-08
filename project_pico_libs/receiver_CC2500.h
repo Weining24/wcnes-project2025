@@ -77,7 +77,8 @@ typedef enum _event_t{
     RSSI_evt         = 4,
     backup_evt       = 5,
     voltagecheck_evt = 6,
-    sense_evt        = 7
+    sense_evt        = 7,
+    init_evt         = 8
 } event_t;
 
 // Address Config = No address check 

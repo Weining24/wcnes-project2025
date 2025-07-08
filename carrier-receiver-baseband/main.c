@@ -182,7 +182,7 @@ void test_my_write(const uint8_t *data, size_t len) {
     printf("SPI data write completed\n");
 }
 
-void test_my_read(size_t len) {
+int8_t test_my_read(uint32_t *data, size_t len) {
     printf("\n=== Testing My Read Protocol ===\n");
     gpio_put(PIN_REQ, 0);  // REQ reset
     gpio_put(PIN_MODE, 0); // 读模式
@@ -213,21 +213,22 @@ void test_my_read(size_t len) {
         printf("ACK high received\n");
     } else {
         printf("ERROR: Timeout waiting for ACK high!\n");
-        return;
+        return -1; // 超时错误
     }
     
     // SPI 数据读取
     printf("Beginning SPI data read...\n");
-    uint8_t *rx_data = malloc(len);
+    uint32_t *rx_data = malloc(len);
     if (!rx_data) {
         printf("ERROR: Memory allocation failed for rx_data\n");
-        return;
+        return -1; // 内存分配失败
     }   
     memset(rx_data, 0, len); // 清空接收缓冲区
     spi_read_blocking(MY_SPI_PORT, 0, rx_data, len);
     printf("Read %d bytes from SPI:\n", len);
     for (size_t i = 0; i < len; ++i) {
-        printf("%c", rx_data[i]);
+        printf("%c=", rx_data[i]);
+        printf("0x%02X ", rx_data[i]);
         if ((i + 1) % 16 == 0) {
             printf("\n");
         }
@@ -242,10 +243,12 @@ void test_my_read(size_t len) {
         printf("ACK low detected\n");
     } else {
         printf("ERROR: Timeout waiting for ACK low!\n");
-        return;
+        return -1; // 超时错误
     }
-    
+    data = rx_data; // 将读取的数据返回
+    free(rx_data); // 释放内存
     printf("My Read Protocol completed successfully!\n");
+    return 0; // 成功
 }
 
 // 初始化所有 GPIO 引脚
@@ -419,16 +422,16 @@ int main() {
     float voltage = 0.0;
 
     init_gpio();
-    while(1){
-        test_my_write(test_data, test_len);
-        sleep_ms(5000); // 等待1秒
-        test_my_read(test_len);
-        // test_my_read();
-        // test_write_only();
-        sleep_ms(5000); // 等待5秒
-        test_my_read(test_len);
-        sleep_ms(5000); // 等待5秒
-    }
+    // while(1){
+    //     test_my_write(test_data, test_len);
+    //     sleep_ms(5000); // 等待1秒
+    //     test_my_read(test_len);
+    //     // test_my_read();
+    //     // test_write_only();
+    //     sleep_ms(5000); // 等待5秒
+    //     test_my_read(test_len);
+    //     sleep_ms(5000); // 等待5秒
+    // }
 
     // while(1){
     //     printf("Waiting for UART data...\n");
@@ -439,30 +442,45 @@ int main() {
     adc_init();
     adc_gpio_init(26); // Initialize GPIO 26 for ADC
     adc_select_input(0); // Select ADC input 0 (GPIO 26)
-
+    evt = init_evt; // Initialize event to no_evt
     while (true) {
-        evt = get_event();
+        // evt = get_event();
         switch(evt){
             case rx_assert_evt:
+                evt = get_event(); // get next event
+                if (evt != rx_assert_evt) {
+                    printf("Unexpected event after rx_assert_evt: %d\n", evt);
+                    break;
+                }
                 // started receiving
                 rx_ready = false;
+                
             break;
             case rx_deassert_evt:
                 // finished receiving
+                evt = get_event(); // get next event
+                if(evt != rx_deassert_evt) {
+                    printf("Unexpected event after rx_deassert_evt: %d\n", evt);
+                    break;
+                }
                 time_us = to_us_since_boot(get_absolute_time());
                 status = readPacket(rx_buffer);
                 printPacket(rx_buffer,status,time_us);
                 RX_start_listen();
                 rx_ready = true;
+                evt = init_evt; // reset event to init_evt
             break;
-            case no_evt:
-                // no event, just wait
-                sleep_ms(1);
-            break;
-            case backup_evt:
-                // backup the current packet
-                printf("Backing up current packet...\n");
-                evt = voltagecheck_evt; 
+            case init_evt:
+                // initialize the system
+                printf("Initializing system...\n");
+                if (test_my_read(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN)) == -1) {
+                    printf("Failed to read data from MSP430.\n");
+                    evt = sense_evt; // set event to sense_evt
+                    break; // continue to the next iteration
+                } else {
+                    printf("Data recovered from MSP430 successfully.\n");
+                }
+                 // read data from MSP430
             break;
             case sense_evt:
                 /* generate new data */
@@ -479,7 +497,13 @@ int main() {
                 for (uint8_t i=0; i < buffer_size(PAYLOADSIZE, HEADER_LEN); i++) {
                     buffer[i] = ((uint32_t) message[4*i+3]) | (((uint32_t) message[4*i+2]) << 8) | (((uint32_t) message[4*i+1]) << 16) | (((uint32_t)message[4*i]) << 24);
                 }
-                evt = voltagecheck_evt; // set event to voltagecheck_evt
+                evt = RSSI_evt; // set event to RSSI_evt
+            break;
+            case backup_evt:
+                // backup the current packet
+                printf("Backing up current packet...\n");
+                test_my_write(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN));
+                evt = voltagecheck_evt; 
             break;
             case voltagecheck_evt:
                 //Check the voltage from ADC
@@ -506,22 +530,29 @@ int main() {
                     // Process the received data if needed
                     if (Current_RSSI < -50) {
                         printf("Signal is weak, consider moving closer to the transmitter.\n");
-                        evt = no_evt; // reset event to no_evt
+                        evt = RSSI_evt; // reset event to no_evt
                         sleep_ms(1000); // wait for 1 second before checking again
                         break; // continue to the next iteration
                     } else if (Current_RSSI >= -50) {
                         printf("Signal is strong, good connection!\n");
+                        evt = no_evt; // reset event to no_evt
+                        break;
                     }
                 } else {
                     printf("No data received from CC2640R2, try again.\n");
-                    sleep_ms(1000); // wait for 1 second before checking again
-                    evt = no_evt; // reset event to no_evt
+                    // sleep_ms(1000); // wait for 1 second before checking again
+                    evt = RSSI_evt; // reset event to no_evt
                     break; // continue to the next iteration
                 }
 
             break;
-            case tx_evt:
+            case no_evt: // actual transmission event
                 // backscatter new packet if receiver is listening
+                evt = get_event(); // get next event
+                if (evt != no_evt) {
+                    printf("Unexpected event: %d\n", evt);
+                    break;
+                }
                 if (rx_ready){
                     /* generate new data */
                     generate_data(tx_payload_buffer, PAYLOADSIZE, true);
