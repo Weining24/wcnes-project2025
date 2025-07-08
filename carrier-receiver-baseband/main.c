@@ -29,30 +29,30 @@
 
 #include "hardware/uart.h"
 #include "hardware/irq.h"
+#include "hardware/adc.h"
 
 /// \tag::uart_advanced[]
 
-#define UART_ID uart1
-#define BAUD_RATE 115200
-#define DATA_BITS 8
-#define STOP_BITS 1
+#define UART_ID              uart1
+#define BAUD_RATE           115200
+#define DATA_BITS                8
+#define STOP_BITS                1
 #define PARITY    UART_PARITY_NONE
 
 // We are using pins 0 and 1, but see the GPIO function select table in the
 // datasheet for information on which other pins can be used.
-#define UART_RX_PIN 5
+#define UART_RX_PIN        5
 #define UART_BUFFER_SIZE 256
-#define UART_END_MARK '\n' // end of line character
-static int chars_rxed = 0;
+#define UART_END_MARK   '\n'// end of line character
+static int  chars_rxed = 0;
 /// \end::uart_advanced[]
 
-// 引脚配置
-// 修改为使用 SPI1
-#define MY_SPI_PORT spi1
-#define SPI_BAUDRATE   5000000  // 1 MHz
-#define PIN_MISO    12
-#define PIN_MOSI    11
-#define PIN_SCK     10
+// SPI pin for MSP430
+#define MY_SPI_PORT     spi1
+#define SPI_BAUDRATE 5000000  // 5 MHz
+#define PIN_MISO          12
+#define PIN_MOSI          11
+#define PIN_SCK           10
 
 #define PIN_IND     0  // 实际是IND信号
 #define PIN_MODE    1
@@ -65,6 +65,8 @@ static int chars_rxed = 0;
 #define MESSAGE_SIZE    128
 #define TIMEOUT_MS      500
 
+
+//SPI Receiver CC2500
 #define RADIO_SPI             spi0
 #define RADIO_MISO              16
 #define RADIO_MOSI              19
@@ -77,7 +79,7 @@ static int chars_rxed = 0;
 #define CLOCK_DIV0              20 // larger
 #define CLOCK_DIV1              18 // smaller
 #define DESIRED_BAUD        100000
-#define TWOANTENNAS          true
+#define TWOANTENNAS           true
 
 #define CARRIER_FEQ     2450000000
 
@@ -140,49 +142,20 @@ bool wait_for_signal(uint pin, bool expected_state, uint timeout_ms) {
     return true;
 }
 
-// 从 MSP430 读取数据
-// bool read_data() {
-//     // 检查数据可用指示 (IND)
-//     if (!gpio_get(PIN_IND)) {
-//         printf("No data available (IND low)\n");
-//         return false;
-//     }
-    
-//     // 设置为读模式
-//     printf("Reading data...\n");
-//     return spi_transfer(false); // false = 读模式
-// }
-
-// 向 MSP430 写入数据
-// bool write_data(const uint8_t *data, size_t len) {
-//     if (len > MESSAGE_SIZE) {
-//         printf("Data too large. Max size: %d\n", MESSAGE_SIZE);
-//         return false;
-//     }
-    
-//     // 设置为写模式
-//     printf("Writing data...\n");
-    
-//     // 准备发送缓冲区
-//     memset(tx_buffer, 0, MESSAGE_SIZE);
-//     memcpy(tx_buffer, data, len);
-    
-//     return spi_transfer(true); // true = 写模式
-// }
-// 简单测试协议握手
-
 void test_my_write(const uint8_t *data, size_t len) {
     gpio_put(PIN_REQ, 0);  // REQ reset
     gpio_put(PIN_MODE, 1); // 写模式
     printf("\n=== Testing My Write Protocol ===\n");
     
-    //check the status of IND
-    // if (!gpio_get(PIN_IND)) {
-    //     printf("No data available (IND low)\n");
-    // } else {
-    //     printf("Data available (IND high)\n");
-    // }
     sleep_ms(100); // 等待稳定
+
+        //IND signal检查
+    if (gpio_get(PIN_IND)) {
+        printf("Buffer is not empty.\n");
+    } else {
+        printf("Buffer is empty\n");
+    }
+    
     gpio_put(PIN_REQ, 1);  // REQ上升沿
     printf("REQ set high\n");
     //wait for ACK high
@@ -213,17 +186,15 @@ void test_my_read(size_t len) {
     gpio_put(PIN_REQ, 0);  // REQ reset
     gpio_put(PIN_MODE, 0); // 读模式
     printf("MODE set to read\n");
-    //check the status of IND
-    // if (!gpio_get(PIN_IND)) {
-    //     printf("No data available (IND low)\n");
-    //     return; // 没有数据可读
-    // } else {
-    //     printf("Data available (IND high)\n");
-    // }
-    // 设置为读模式
 
     sleep_ms(100); // 等待稳定
 
+    //IND signal检查
+    if (gpio_get(PIN_IND)) {
+        printf("Buffer is not empty.\n");
+    } else {
+        printf("Buffer is empty\n");
+    }
     // 发起请求 (REQ 低->高 上升沿)
     gpio_put(PIN_REQ, 1);
     printf("REQ set high\n");
@@ -246,7 +217,6 @@ void test_my_read(size_t len) {
     memset(rx_data, 0, len); // 清空接收缓冲区
     spi_read_blocking(MY_SPI_PORT, 0, rx_data, len);
     printf("Read %d bytes from SPI:\n", len);
-    printf
     // for (size_t i = 0; i < len; ++i) {
     //     printf("%c", rx_data[i]);
     //     if ((i + 1) % 16 == 0) {
@@ -328,88 +298,26 @@ void on_uart_rx() {
         // }
     }
     printf("Received: %s\n", rx_buffer);
+    //Convert the received data to an integer
+    int received_value = 0;
+    if (sscanf((const char *)rx_buffer, "%d", &received_value) == 1) {
+        printf("Received integer value: %d\n", received_value);
+    return received_value;
+    } else {
+        printf("Failed to parse integer from received data.\n");
+        return -1; // or some error code
+    }
 }
 
-bool spi_write_only(bool direction, const uint8_t *data, size_t len) {
-    gpio_put(PIN_REQ, 0);
-    printf("Starting SPI write (dir: %s, len: %d)\n", 
-           direction ? "WRITE" : "READ", len);
-    
-    // 1. 设置传输方向
-    gpio_put(PIN_MODE, 0);
-    printf("MODE set to %d\n", direction);
-    
-    // 2. 发起请求 (REQ 低->高 上升沿)
-    printf("Setting REQ HIGH\n");
-    gpio_put(PIN_REQ, 1);
-    // print_signals();
-    
-    // 3. 等待 ACK 高 (带超时)
-    printf("Waiting for ACK HIGH...\n");
-    absolute_time_t start_time = get_absolute_time();
-    while (!gpio_get(PIN_ACK)) {
-        if (absolute_time_diff_us(start_time, get_absolute_time()) > TIMEOUT_MS * 1000) {
-            printf("ERROR: Timeout waiting for ACK high!\n");
-            gpio_put(PIN_REQ, 0);
-            return false;
-        }
-        sleep_us(10);
-    }
-    printf("ACK HIGH detected\n");
-    // print_signals();
-    
-    // 4. SPI 数据传输 (只写)
-    printf("Beginning SPI data write...\n");
-    
-    // 分块写入数据（避免阻塞）
-    for (size_t i = 0; i < len; i++) {
-        spi_write_blocking(MY_SPI_PORT, &data[i], 1);
-        printf("Wrote byte %d: 0x%02X\n", i, data[i]);
-        sleep_us(10); // 小延迟确保稳定
-    }
-    
-    printf("SPI data write completed\n");
-    
-    // 5. 结束传输 (REQ 高->低 下降沿)
-    printf("Setting REQ LOW\n");
-    gpio_put(PIN_REQ, 0);
-    // print_signals();
-    
-    // 6. 等待 ACK 低
-    printf("Waiting for ACK LOW...\n");
-    start_time = get_absolute_time();
-    while (gpio_get(PIN_ACK)) {
-        if (absolute_time_diff_us(start_time, get_absolute_time()) > TIMEOUT_MS * 1000) {
-            printf("ERROR: Timeout waiting for ACK low!\n");
-            return false;
-        }
-        sleep_us(10);
-    }
-    printf("ACK LOW detected\n");
-    // print_signals();
-    
-    printf("SPI write successful!\n");
-    return true;
+//Get voltage from ADC
+float get_voltage() {
+    const float conversion_factor = 3.3f / (1 << 12);
+    uint16_t result = adc_read();
+    float voltage = result * conversion_factor;
+    printf("ADC Voltage: %.2f V\n", voltage);
+    return voltage;
 }
-void test_write_only() {
-    printf("\n=== Pure Write Test ===\n");
-    
-    // 测试数据
-    uint8_t test_data[] = {0x55, 0xAA, 0x01, 0x80}; // 简单测试模式
-    size_t test_len = sizeof(test_data);
-    
-    // 执行纯写操作
-    if (spi_write_only(true, test_data, test_len)) {
-        printf("Write test completed successfully!\n");
-    } else {
-        printf("Write test failed\n");
-    }
-    
-    // 额外等待，确保完成
-    sleep_ms(100);
-    printf("Final signal states: ");
-    // print_signals();
-}
+
 int main() {
     /* setup SPI */
     stdio_init_all();
@@ -440,13 +348,7 @@ int main() {
     gpio_put(CARRIER_CSN, 1);
     bi_decl(bi_1pin_with_name(CARRIER_CSN, "SPI Carrier CS"));
 
-
-
-
-
-
-
-    // sleep_ms(5000);
+    sleep_ms(2000);
 
     /* setup backscatter state machine */
     PIO pio = pio0;
@@ -487,24 +389,26 @@ int main() {
     printf("Deviation  : %d\n", backscatter_conf.deviation);
     /* loop */
 
-        // Set up our UART with a basic baud rate.
+    // Set up our UART with a baud rate.to access RSSI frim CC2640R2
     uart_init(UART_ID, 115200);
     gpio_set_function(UART_RX_PIN, UART_FUNCSEL_NUM(UART_ID, UART_RX_PIN));
     // int __unused actual = uart_set_baudrate(UART_ID, BAUD_RATE);
     // uart_set_hw_flow(UART_ID, false, false);
     // uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
-    int UART_IRQ = UART1_IRQ;
+    // int UART_IRQ = UART1_IRQ;
 
     // // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
-    irq_set_enabled(UART_IRQ, true);
-    uart_set_irq_enables(UART_ID, true, false);
-    irq_set_priority(UART_IRQ, 0);
+    // irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
+    // irq_set_enabled(UART_IRQ, true);
+    // uart_set_irq_enables(UART_ID, true, false);
+    // irq_set_priority(UART_IRQ, 0);
 
     uint8_t test_data[] = "Hello MSP430!";
     size_t test_len = sizeof(test_data) - 1; // 不包括结尾的null
 
     uint32_t counter = 0;
+    float voltage = 0.0;
+
     init_gpio();
     while(1){
         test_my_write(test_data, test_len);
@@ -514,29 +418,16 @@ int main() {
         // test_write_only();
         sleep_ms(2500); // 等待5秒
     }
-    while (true) {
-        printf("\n=== Cycle %lu ===\n", counter);
-        // 尝试读取数据
-        // if (read_data()) {
-        //     printf("Read successful. Data: ");
-        //     for (int i = 0; i < 16 && i < MESSAGE_SIZE; i++) {
-        //         printf("%02x ", rx_buffer[i]);
-        //     }
-        //     printf("\n");
-        // }
-        
-        
-        // 等待下次操作
-        sleep_ms(5000);
-        counter++;
-    }
 
-    while(1){
-        printf("Waiting for UART data...\n");
-        sleep_ms(1000); // wait for 1 second before checking again
-        // on_uart_rx(); // wait for 1 second before checking again
-        // printf("Done...\n");
-    }
+    // while(1){
+    //     printf("Waiting for UART data...\n");
+    //     sleep_ms(1000); // wait for 1 second before checking again
+    //     // on_uart_rx(); // wait for 1 second before checking again
+    //     // printf("Done...\n");
+    // }
+    adc_init();
+    adc_gpio_init(26); // Initialize GPIO 26 for ADC
+    adc_select_input(0); // Select ADC input 0 (GPIO 26)
 
     while (true) {
         evt = get_event();
@@ -554,6 +445,71 @@ int main() {
                 rx_ready = true;
             break;
             case no_evt:
+                // no event, just wait
+                sleep_ms(1);
+            break;
+            case backup_evt:
+                // backup the current packet
+                printf("Backing up current packet...\n");
+                evt = voltagecheck_evt; 
+            break;
+            case sense_evt:
+                /* generate new data */
+                //Pretend to generate data for transmission
+                printf("Generating new data for transmission...\n");
+                generate_data(tx_payload_buffer, PAYLOADSIZE, true);
+
+                /* add header (10 byte) to packet */
+                add_header(&message[0], seq, header_tmplate);
+                /* add payload to packet */
+                memcpy(&message[HEADER_LEN], tx_payload_buffer, PAYLOADSIZE);
+
+                /* casting for 32-bit fifo */
+                for (uint8_t i=0; i < buffer_size(PAYLOADSIZE, HEADER_LEN); i++) {
+                    buffer[i] = ((uint32_t) message[4*i+3]) | (((uint32_t) message[4*i+2]) << 8) | (((uint32_t) message[4*i+1]) << 16) | (((uint32_t)message[4*i]) << 24);
+                }
+                evt = voltagecheck_evt; // set event to voltagecheck_evt
+            break;
+            case voltagecheck_evt:
+                //Check the voltage from ADC
+                printf("Checking voltage...\n");
+                voltage = get_voltage();
+                if (voltage < 2.0) {
+                    printf("Voltage is low: %.2f V, consider backup the current packet.\n", voltage);
+                    evt = backup_evt; // set event to backup_evt
+                    break; // continue to the next iteration
+                } else {
+                    printf("Voltage is sufficient: %.2f V\n", voltage);
+                    evt = RSSI_evt;
+                    break; // continue to the next iteration
+                }
+            break;
+            case RSSI_evt:
+                // This event is used to read RSSI from CC2640R2
+                // Ask for RSSI from CC2640R2 regularly
+                printf("Checking RSSI...\n");
+                int Current_RSSI = 0;
+                Current_RSSI = on_uart_rx(); // Call the function to read data from CC2640R2
+                if (Current_RSSI != -1) {
+                    printf("Current RSSI: %d\n", Current_RSSI);
+                    // Process the received data if needed
+                    if (Current_RSSI < -50) {
+                        printf("Signal is weak, consider moving closer to the transmitter.\n");
+                        evt = no_evt; // reset event to no_evt
+                        sleep_ms(1000); // wait for 1 second before checking again
+                        break; // continue to the next iteration
+                    } else if (Current_RSSI >= -50) {
+                        printf("Signal is strong, good connection!\n");
+                    }
+                } else {
+                    printf("No data received from CC2640R2, try again.\n");
+                    sleep_ms(1000); // wait for 1 second before checking again
+                    evt = no_evt; // reset event to no_evt
+                    break; // continue to the next iteration
+                }
+
+            break;
+            case tx_evt:
                 // backscatter new packet if receiver is listening
                 if (rx_ready){
                     /* generate new data */

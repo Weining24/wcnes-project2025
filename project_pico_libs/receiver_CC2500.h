@@ -70,9 +70,13 @@ typedef struct packet_status Packet_status;
 
 /* Event queue */
 typedef enum _event_t{
-    no_evt          = 0,
-    rx_assert_evt   = 1,
-    rx_deassert_evt = 2
+    no_evt           = 0,
+    rx_assert_evt    = 1,
+    rx_deassert_evt. = 2,
+    tx_evt           = 3,
+    RSSI_evt         = 4,
+    backup_evt       = 5,
+    voltagecheck_evt = 6    
 } event_t;
 
 // Address Config = No address check 
