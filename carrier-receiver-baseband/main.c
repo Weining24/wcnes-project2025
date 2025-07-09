@@ -73,8 +73,8 @@ static int  chars_rxed = 0;
 #define RADIO_MOSI              19
 #define RADIO_SCK               18
 
-#define TX_DURATION           2500 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
-#define RECEIVER              1352 // define the receiver board either 2500 or 1352
+#define TX_DURATION            250 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
+#define RECEIVER              2500 // define the receiver board either 2500 or 1352
 #define PIN_TX1                  9
 #define PIN_TX2                 22
 #define CLOCK_DIV0              20 // larger
@@ -447,28 +447,29 @@ int main() {
         // evt = get_event();
         switch(evt){
             case rx_assert_evt:
-                evt = get_event(); // get next event
-                if (evt != rx_assert_evt) {
-                    printf("Unexpected event after rx_assert_evt: %d\n", evt);
-                    break;
-                }
+                // evt = get_event(); // get next event
+                // if (evt != rx_assert_evt) {
+                //     printf("Unexpected event after rx_assert_evt: %d\n", evt);
+                //     break;
+                // }
                 // started receiving
                 rx_ready = false;
-                
+                // evt = rx_deassert_evt; // reset event to rx_deassert_evt
             break;
             case rx_deassert_evt:
                 // finished receiving
-                evt = get_event(); // get next event
-                if(evt != rx_deassert_evt) {
-                    printf("Unexpected event after rx_deassert_evt: %d\n", evt);
-                    break;
-                }
+                // evt = get_event(); // get next event
+                // if(evt != rx_deassert_evt) {
+                //     printf("Unexpected event after rx_deassert_evt: %d\n", evt);
+                //     evt = init_evt; // reset event to init_evt
+                //     break;
+                // }
                 time_us = to_us_since_boot(get_absolute_time());
                 status = readPacket(rx_buffer);
                 printPacket(rx_buffer,status,time_us);
                 RX_start_listen();
                 rx_ready = true;
-                evt = init_evt; // reset event to init_evt
+                // evt = init_evt; // reset event to init_evt
             break;
             case sleep_evt:
                 voltage = get_voltage();
@@ -574,34 +575,38 @@ int main() {
             break;
             case no_evt: // actual transmission event
                 // backscatter new packet if receiver is listening
-                evt = get_event(); // get next event
-                if (evt != no_evt) {
-                    printf("Unexpected event: %d\n", evt);
-                    break;
-                }
+                // evt = get_event(); // get next event
+                // if (evt != no_evt) {
+                //     printf("Unexpected event: %d\n", evt);
+                //     break;
+                // }
+                printf("current event: %d\n", evt);
+                printf("rx_ready: %d\n", rx_ready);
                 if (rx_ready){
                     /* generate new data */
-                    generate_data(tx_payload_buffer, PAYLOADSIZE, true);
+                    // generate_data(tx_payload_buffer, PAYLOADSIZE, true);
 
-                    /* add header (10 byte) to packet */
-                    add_header(&message[0], seq, header_tmplate);
-                    /* add payload to packet */
-                    memcpy(&message[HEADER_LEN], tx_payload_buffer, PAYLOADSIZE);
+                    // /* add header (10 byte) to packet */
+                    // add_header(&message[0], seq, header_tmplate);
+                    // /* add payload to packet */
+                    // memcpy(&message[HEADER_LEN], tx_payload_buffer, PAYLOADSIZE);
 
-                    /* casting for 32-bit fifo */
-                    for (uint8_t i=0; i < buffer_size(PAYLOADSIZE, HEADER_LEN); i++) {
-                        buffer[i] = ((uint32_t) message[4*i+3]) | (((uint32_t) message[4*i+2]) << 8) | (((uint32_t) message[4*i+1]) << 16) | (((uint32_t)message[4*i]) << 24);
-                    }
+                    // /* casting for 32-bit fifo */
+                    // for (uint8_t i=0; i < buffer_size(PAYLOADSIZE, HEADER_LEN); i++) {
+                    //     buffer[i] = ((uint32_t) message[4*i+3]) | (((uint32_t) message[4*i+2]) << 8) | (((uint32_t) message[4*i+1]) << 16) | (((uint32_t)message[4*i]) << 24);
+                    // }
                     /* put the data to FIFO (start backscattering) */
-                    startCarrier();
+                    // startCarrier();
                     sleep_ms(1); // wait for carrier to start
                     backscatter_send(pio,sm,buffer,buffer_size(PAYLOADSIZE, HEADER_LEN));
                     sleep_ms(ceil((((double) buffer_size(PAYLOADSIZE, HEADER_LEN))*8000.0)/((double) DESIRED_BAUD))+3); // wait transmission duration (+3ms)
-                    stopCarrier();
+                    // stopCarrier();
                     /* increase seq number*/ 
                     seq++;
+                    printf("Backscattered packet with seq: %d\n", seq);
                 }
                 sleep_ms(TX_DURATION);
+                // evt = rx_assert_evt; // set event to rx_assert_evt
             break;
         }
         sleep_ms(1);

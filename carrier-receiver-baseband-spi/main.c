@@ -53,7 +53,7 @@ static int chars_rxed = 0;
 #define RADIO_SCK               18
 
 #define TX_DURATION            250 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
-#define RECEIVER              1352 // define the receiver board either 2500 or 1352
+#define RECEIVER              2500 // define the receiver board either 2500 or 1352
 #define PIN_TX1                  9
 #define PIN_TX2                 22
 #define CLOCK_DIV0              20 // larger
@@ -174,28 +174,30 @@ int main() {
     // int __unused actual = uart_set_baudrate(UART_ID, BAUD_RATE);
     // uart_set_hw_flow(UART_ID, false, false);
     // uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
-    int UART_IRQ = UART1_IRQ;
+    // int UART_IRQ = UART1_IRQ;
 
     // // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
-    irq_set_enabled(UART_IRQ, true);
-    uart_set_irq_enables(UART_ID, true, false);
-    irq_set_priority(UART_IRQ, 0);
-    while(1){
-        printf("Waiting for UART data...\n");
-        sleep_ms(1000); // wait for 1 second before checking again
-        // on_uart_rx(); // wait for 1 second before checking again
-        // printf("Done...\n");
-    }
+    // irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
+    // irq_set_enabled(UART_IRQ, true);
+    // uart_set_irq_enables(UART_ID, true, false);
+    // irq_set_priority(UART_IRQ, 0);
+    // while(1){
+    //     printf("Waiting for UART data...\n");
+    //     sleep_ms(1000); // wait for 1 second before checking again
+    //     // on_uart_rx(); // wait for 1 second before checking again
+    //     // printf("Done...\n");
+    // }
 
     while (true) {
         evt = get_event();
         switch(evt){
             case rx_assert_evt:
+            printf("current event: %d\n", evt);
                 // started receiving
                 rx_ready = false;
             break;
             case rx_deassert_evt:
+            printf("current event: %d\n", evt);
                 // finished receiving
                 time_us = to_us_since_boot(get_absolute_time());
                 status = readPacket(rx_buffer);
@@ -204,6 +206,7 @@ int main() {
                 rx_ready = true;
             break;
             case no_evt:
+            printf("current event: %d\n", evt);
                 // backscatter new packet if receiver is listening
                 if (rx_ready){
                     /* generate new data */
@@ -226,6 +229,7 @@ int main() {
                     stopCarrier();
                     /* increase seq number*/ 
                     seq++;
+                    printf("Backscattered packet with seq: %d\n", seq);
                 }
                 sleep_ms(TX_DURATION);
             break;
