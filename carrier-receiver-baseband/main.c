@@ -526,8 +526,10 @@ int main() {
                 int Current_RSSI = 0;
                 Current_RSSI = on_uart_rx(); // Call the function to read data from CC2640R2
                 if (Current_RSSI != -1) {
+                    Current_RSSI = -30;
                     printf("Current RSSI: %d\n", Current_RSSI);
                     // Process the received data if needed
+
                     if (Current_RSSI < -50) {
                         printf("Signal is weak, consider moving closer to the transmitter.\n");
                         evt = RSSI_evt; // reset event to no_evt
