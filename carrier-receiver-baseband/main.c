@@ -73,7 +73,7 @@ static int  chars_rxed = 0;
 #define RADIO_MOSI              19
 #define RADIO_SCK               18
 
-#define TX_DURATION            250 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
+#define TX_DURATION           2500 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
 #define RECEIVER              1352 // define the receiver board either 2500 or 1352
 #define PIN_TX1                  9
 #define PIN_TX2                 22
@@ -470,15 +470,34 @@ int main() {
                 rx_ready = true;
                 evt = init_evt; // reset event to init_evt
             break;
+            case sleep_evt:
+                voltage = get_voltage();
+                if (voltage < 2.0) {
+                    printf("Voltage is low: %.2f V, keep sleep.\n", voltage);
+                    evt = sleep_evt; // set event to backup_evt
+                    break; // continue to the next iteration
+                } else {
+                    printf("Voltage is sufficient: %.2f V, weak up!\n", voltage);
+                    evt = init_evt;
+                    break; // continue to the next iteration
+                }
             case init_evt:
                 // initialize the system
                 printf("Initializing system...\n");
+                voltage = get_voltage();
+                if (voltage < 2.0) {
+                    printf("Voltage is low: %.2f V, back to sleep.\n", voltage);
+                    evt = sleep_evt; // set event to backup_evt
+                    break; // continue to the next iteration
+                }
                 if (test_my_read(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN)) == -1) {
-                    printf("Failed to read data from MSP430.\n");
+                    printf("No data stored in MSP430 or read failed, trying to sense new data...\n");
                     evt = sense_evt; // set event to sense_evt
                     break; // continue to the next iteration
                 } else {
                     printf("Data recovered from MSP430 successfully.\n");
+                    evt = no_evt; // transmission event
+                    break;
                 }
                  // read data from MSP430
             break;
@@ -522,22 +541,27 @@ int main() {
             case RSSI_evt:
                 // This event is used to read RSSI from CC2640R2
                 // Ask for RSSI from CC2640R2 regularly
+                voltage = get_voltage();
+                if (voltage < 2.0) {
+                    printf("Voltage is low: %.2f V, consider backup the current packet.\n", voltage);
+                    evt = backup_evt; // set event to backup_evt
+                    break; // continue to the next iteration
+                }
                 printf("Checking RSSI...\n");
                 int Current_RSSI = 0;
                 Current_RSSI = on_uart_rx(); // Call the function to read data from CC2640R2
                 if (Current_RSSI != -1) {
-                    Current_RSSI = -30;
                     printf("Current RSSI: %d\n", Current_RSSI);
                     // Process the received data if needed
 
                     if (Current_RSSI < -50) {
                         printf("Signal is weak, consider moving closer to the transmitter.\n");
                         evt = RSSI_evt; // reset event to no_evt
-                        sleep_ms(1000); // wait for 1 second before checking again
+                        // sleep_ms(1000); // wait for 1 second before checking again
                         break; // continue to the next iteration
                     } else if (Current_RSSI >= -50) {
                         printf("Signal is strong, good connection!\n");
-                        evt = no_evt; // reset event to no_evt
+                        evt = no_evt; // reset event to transmission event
                         break;
                     }
                 } else {
