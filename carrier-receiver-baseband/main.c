@@ -73,7 +73,7 @@ static int  chars_rxed = 0;
 #define RADIO_MOSI              19
 #define RADIO_SCK               18
 
-#define TX_DURATION            250 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
+#define TX_DURATION           5000 // send a packet every 250ms (when changing baud-rate, ensure that the TX delay is larger than the transmission time)
 #define RECEIVER              2500 // define the receiver board either 2500 or 1352
 #define PIN_TX1                  9
 #define PIN_TX2                 22
@@ -143,81 +143,70 @@ bool wait_for_signal(uint pin, bool expected_state, uint timeout_ms) {
     return true;
 }
 
-void test_my_write(const uint8_t *data, size_t len) {
+int8_t test_my_write(const uint8_t *data, size_t len) {
     gpio_put(PIN_REQ, 0);  // REQ reset
     gpio_put(PIN_MODE, 1); // 写模式
-    printf("\n=== Testing My Write Protocol ===\n");
+    // printf("\n=== Testing My Write Protocol ===\n");
+    printf("Backup packet to MSP430 ...\n");
     
     sleep_ms(100); // 等待稳定
-
-        //IND signal检查
-    if (gpio_get(PIN_IND)) {
-        printf("Buffer is not empty.\n");
-    } else {
-        printf("Buffer is empty\n");
-    }
     
     gpio_put(PIN_REQ, 1);  // REQ上升沿
-    printf("REQ set high\n");
+    // printf("REQ set high\n");
     //wait for ACK high
     if (wait_for_signal(PIN_ACK, 1, TIMEOUT_MS)) {
-        printf("ACK high received\n");
+        // printf("ACK high received\n");
     } else {
         printf("ERROR: Timeout waiting for ACK high!\n");
-        return;
+        return -1;
     }
 
     // 4. SPI 数据传输 (只写)
     printf("Beginning SPI data write...\n");
     bool success = spi_is_writable(MY_SPI_PORT);
-    printf("SPI writable? %s\n", success ? "yes" : "no");
+    // printf("SPI writable? %s\n", success ? "yes" : "no");
     spi_write_blocking(MY_SPI_PORT, data, len);//len 是数据长度 in bytes
+    for (size_t i = 0; i < len; ++i) {
+        // printf("%c=", rx_data[i]);
+        printf("0x%02X ", data[i]);
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
     
     // for (int i = 0; i < len; ++i) {
     //     int ret = spi_write_blocking(MY_SPI_PORT, &data[i], 1);
     //     printf("Wrote byte %d: 0x%02X (ret = %d)\n", i, data[i], ret);
     // }
     gpio_put(PIN_REQ, 0);  
-    printf("REQ set low to write\n");
-    printf("SPI data write completed\n");
+    // printf("REQ set low to write\n");
+    printf("Backup completed\n");
+    return 0;
 }
 
 int8_t test_my_read(uint32_t *data, size_t len) {
-    printf("\n=== Testing My Read Protocol ===\n");
+    // printf("\n=== Testing My Read Protocol ===\n");
     gpio_put(PIN_REQ, 0);  // REQ reset
     gpio_put(PIN_MODE, 0); // 读模式
-    printf("MODE set to read\n");
+    // printf("MODE set to read\n");
+    printf("Recover packet from MSP430 ...\n");
 
     sleep_ms(100); // 等待稳定
 
-    //IND signal检查
-    if (gpio_get(PIN_IND)) {
-        printf("Buffer is not empty.\n");
-    } else {
-        printf("Buffer is empty\n");
-    }
     // 发起请求 (REQ 低->高 上升沿)
     gpio_put(PIN_REQ, 1);
-    printf("REQ set high\n");
-
-
-        //IND signal检查
-    if (gpio_get(PIN_IND)) {
-        printf("Buffer is not empty.\n");
-    } else {
-        printf("Buffer is empty\n");
-    }
+    // printf("REQ set high\n");
     
     // 等待 ACK 高 (带超时)
     if (wait_for_signal(PIN_ACK, 1, TIMEOUT_MS)) {
-        printf("ACK high received\n");
+        // printf("ACK high received\n");
     } else {
         printf("ERROR: Timeout waiting for ACK high!\n");
         return -1; // 超时错误
     }
     
     // SPI 数据读取
-    printf("Beginning SPI data read...\n");
+    // printf("Beginning SPI data read...\n");
     uint32_t *rx_data = malloc(len);
     if (!rx_data) {
         printf("ERROR: Memory allocation failed for rx_data\n");
@@ -227,7 +216,7 @@ int8_t test_my_read(uint32_t *data, size_t len) {
     spi_read_blocking(MY_SPI_PORT, 0, rx_data, len);
     printf("Read %d bytes from SPI:\n", len);
     for (size_t i = 0; i < len; ++i) {
-        printf("%c=", rx_data[i]);
+        // printf("%c=", rx_data[i]);
         printf("0x%02X ", rx_data[i]);
         if ((i + 1) % 16 == 0) {
             printf("\n");
@@ -236,18 +225,18 @@ int8_t test_my_read(uint32_t *data, size_t len) {
     
     // 结束传输 (REQ 高->低 下降沿)
     gpio_put(PIN_REQ, 0);
-    printf("REQ set low to end read\n");
+    // printf("REQ set low to end read\n");
     
     // 等待 ACK 低
     if (wait_for_signal(PIN_ACK, 0, TIMEOUT_MS)) {
-        printf("ACK low detected\n");
+        // printf("ACK low detected\n");
     } else {
         printf("ERROR: Timeout waiting for ACK low!\n");
         return -1; // 超时错误
     }
     data = rx_data; // 将读取的数据返回
     free(rx_data); // 释放内存
-    printf("My Read Protocol completed successfully!\n");
+    printf("Recover packet from MSP430 successfully!\n");
     return 0; // 成功
 }
 
@@ -285,34 +274,47 @@ void init_gpio() {
 // RX interrupt handler
 int on_uart_rx() {
     uint16_t rx_index = 0;
-    uint8_t rx_buffer[UART_BUFFER_SIZE] = {0};
+    uint8_t rx_buffer_0[UART_BUFFER_SIZE] = {0};
+    uint8_t rx_buffer_1[UART_BUFFER_SIZE] = {0};
     while (uart_is_readable(UART_ID)) {
         // printf("UART data received...\n");
         int8_t ch = uart_getc(UART_ID);
         // printf("Received char: %c\n", ch);
         if(rx_index < UART_BUFFER_SIZE - 1) {
-            rx_buffer[rx_index++] = ch;
+            rx_buffer_0[rx_index++] = ch;
         } else {
             rx_index = 0; // reset index if buffer is full
         }
 
         if(ch == UART_END_MARK) {
             // We have a complete line, so print it out.
-            rx_buffer[rx_index] = '\0'; // null-terminate the string
+            rx_buffer_0[rx_index] = '\0'; // null-terminate the string
             // printf("Received: %s\n", rx_buffer);
             rx_index = 0; // reset index for next line
         }
-        // Can we send it back?
-        // if (uart_is_writable(UART_ID)) {
-        //     // Change it slightly first!
-        //     ch++;
-        //     uart_putc(UART_ID, ch);
-        // }
     }
-    printf("Received: %s\n", rx_buffer);
+    while (uart_is_readable(UART_ID)) {
+        // printf("UART data received...\n");
+        int8_t ch = uart_getc(UART_ID);
+        // printf("Received char: %c\n", ch);
+        if(rx_index < UART_BUFFER_SIZE - 1) {
+            rx_buffer_1[rx_index++] = ch;
+        } else {
+            rx_index = 0; // reset index if buffer is full
+        }
+
+        if(ch == UART_END_MARK) {
+            // We have a complete line, so print it out.
+            rx_buffer_1[rx_index] = '\0'; // null-terminate the string
+            // printf("Received: %s\n", rx_buffer);
+            rx_index = 0; // reset index for next line
+        }
+    }
+
+    printf("Received: %s\n", rx_buffer_1);
     //Convert the received data to an integer
     int received_value = 0;
-    if (sscanf((const char *)rx_buffer, "%d", &received_value) == 1) {
+    if (sscanf((const char *)rx_buffer_1, "%d", &received_value) == 1) {
         printf("Received integer value: %d\n", received_value);
         return received_value;
     } else {
@@ -443,6 +445,8 @@ int main() {
     adc_gpio_init(26); // Initialize GPIO 26 for ADC
     adc_select_input(0); // Select ADC input 0 (GPIO 26)
     evt = init_evt; // Initialize event to no_evt
+    static bool MSP430_flag = false; // Flag to indicate if MSP430 data is available
+    static uint16_t MPS430_counter = 0; // Counter for MSP430 data
     while (true) {
         // evt = get_event();
         switch(evt){
@@ -475,10 +479,12 @@ int main() {
                 voltage = get_voltage();
                 if (voltage < 2.0) {
                     printf("Voltage is low: %.2f V, keep sleep.\n", voltage);
+                    sleep_ms(5000); // wait for 5 seconds before checking again
                     evt = sleep_evt; // set event to backup_evt
                     break; // continue to the next iteration
                 } else {
                     printf("Voltage is sufficient: %.2f V, weak up!\n", voltage);
+                    sleep_ms(5000); // wait for 5 seconds before checking again
                     evt = init_evt;
                     break; // continue to the next iteration
                 }
@@ -488,17 +494,32 @@ int main() {
                 voltage = get_voltage();
                 if (voltage < 2.0) {
                     printf("Voltage is low: %.2f V, back to sleep.\n", voltage);
-                    evt = sleep_evt; // set event to backup_evt
+                    evt = sleep_evt; // set event to sleep_evt
+                    sleep_ms(5000); // wait for 1 second before checking again
                     break; // continue to the next iteration
                 }
-                if (test_my_read(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN)) == -1) {
-                    printf("No data stored in MSP430 or read failed, trying to sense new data...\n");
-                    evt = sense_evt; // set event to sense_evt
-                    break; // continue to the next iteration
+                if (MSP430_flag) {
+                    if (test_my_read(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN)) == -1) {
+                        printf("No data stored in MSP430 or read failed, trying to sense new data...\n");
+                        sleep_ms(5000); // wait for 5 seconds before checking again
+                        MSP430_flag = false; // reset the flag
+                        evt = sense_evt; // set event to sense_evt
+                        break; // continue to the next iteration
+                    } else {
+                        printf("Data recovered from MSP430 successfully.\n");
+                        MSP430_counter--; // decrement the MSP430 counter
+                        if (MSP430_counter == 0) {
+                            MSP430_flag = false; // reset the flag if no more data
+                        }
+                        evt = no_evt; // transmission event
+                        sleep_ms(5000); // wait for 5 seconds before checking again
+                        break;
+                    }
                 } else {
-                    printf("Data recovered from MSP430 successfully.\n");
-                    evt = no_evt; // transmission event
-                    break;
+                    printf("No MSP430 data available, generating new data...\n");
+                    evt = sense_evt; // set event to sense_evt
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    break; // continue to the next iteration
                 }
                  // read data from MSP430
             break;
@@ -517,13 +538,44 @@ int main() {
                 for (uint8_t i=0; i < buffer_size(PAYLOADSIZE, HEADER_LEN); i++) {
                     buffer[i] = ((uint32_t) message[4*i+3]) | (((uint32_t) message[4*i+2]) << 8) | (((uint32_t) message[4*i+1]) << 16) | (((uint32_t)message[4*i]) << 24);
                 }
+                sleep_ms(5000); // wait for 5 seconds before checking again
                 evt = RSSI_evt; // set event to RSSI_evt
             break;
             case backup_evt:
                 // backup the current packet
                 printf("Backing up current packet...\n");
-                test_my_write(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN));
-                evt = voltagecheck_evt; 
+                if (test_my_write(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN)) == 0) {
+                    printf("Data backed up to MSP430 successfully.\n");
+                    MSP430_flag = true; // set the flag to indicate data is available
+                    MSP430_counter++; // increment the MSP430 counter
+                    evt = sleep_evt; // set event to sleep_evt
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    break; // continue to the next iteration
+                } else {
+                    printf("Failed to backup data to MSP430. Check the connection.\n");
+                    evt = sleep_evt; // set event to sleep_evt
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    break; // continue to the next iteration
+                }
+            break;
+            case recover_evt:
+                printf("Recovering data from MSP430...\n");
+                if (test_my_read(buffer, buffer_size(PAYLOADSIZE, HEADER_LEN)) == -1) {
+                    printf("No data stored in MSP430 or read failed, trying to sense new data...\n");
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    MSP430_flag = false; // reset the flag
+                    evt = sense_evt; // set event to sense_evt
+                    break; // continue to the next iteration
+                } else {    
+                    printf("Data recovered from MSP430 successfully.\n");
+                    MSP430_counter--; // decrement the MSP430 counter
+                    if (MSP430_counter == 0) {
+                        MSP430_flag = false; // reset the flag if no more data
+                    }
+                    evt = no_evt; // transmission event
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    break;
+                }
             break;
             case voltagecheck_evt:
                 //Check the voltage from ADC
@@ -558,17 +610,19 @@ int main() {
                     if (Current_RSSI < -50) {
                         printf("Signal is weak, consider moving closer to the transmitter.\n");
                         evt = RSSI_evt; // reset event to no_evt
-                        // sleep_ms(1000); // wait for 1 second before checking again
+                        sleep_ms(5000); // wait for 1 second before checking again
                         break; // continue to the next iteration
                     } else if (Current_RSSI >= -50) {
                         printf("Signal is strong, good connection!\n");
                         evt = no_evt; // reset event to transmission event
+                        sleep_ms(5000); // wait for 5 seconds before checking again
                         break;
                     }
                 } else {
                     printf("No data received from CC2640R2, try again.\n");
                     // sleep_ms(1000); // wait for 1 second before checking again
                     evt = RSSI_evt; // reset event to no_evt
+                    sleep_ms(5000); // wait for 5 seconds before checking again
                     break; // continue to the next iteration
                 }
 
@@ -580,9 +634,11 @@ int main() {
                 //     printf("Unexpected event: %d\n", evt);
                 //     break;
                 // }
-                printf("current event: %d\n", evt);
-                printf("rx_ready: %d\n", rx_ready);
-                if (rx_ready){
+                // printf("current event: %d\n", evt);
+                // printf("rx_ready: %d\n", rx_ready);
+                // if (rx_ready)
+                {
+
                     /* generate new data */
                     // generate_data(tx_payload_buffer, PAYLOADSIZE, true);
 
@@ -607,6 +663,17 @@ int main() {
                 }
                 sleep_ms(TX_DURATION);
                 // evt = rx_assert_evt; // set event to rx_assert_evt
+                if (MSP430_flag == false) {
+                    printf("No MSP430 data available, generating new data...\n");
+                    evt = sense_evt; // set event to sense_evt
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    break;
+                } else {
+                    printf("Try to reover data from MSP430...\n");
+                    evt = recover_evt; // set event to recover_evt
+                    sleep_ms(5000); // wait for 5 seconds before checking again
+                    break;
+                }
             break;
         }
         sleep_ms(1);
